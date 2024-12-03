@@ -8,7 +8,7 @@ from trivia_game.trivia_api import TriviaAPIClient
 @pytest.fixture
 def trivia_client():
     """Fixture for TriviaAPIClient instance"""
-    client = TriviaAPIClient("http://opentdb.com/api.php")
+    client = TriviaAPIClient()
     yield client
     client.session.close()
 

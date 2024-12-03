@@ -1,20 +1,12 @@
-from dataclasses import dataclass
-from typing import Any, ClassVar, TypedDict
+from typing import Any
 
 import requests
 
-class TriviaResponse(TypedDict):
-    response_code: int
-    results: list[dict[str, Any]]
-
-@dataclass(frozen=True)
-class ResponseType:
-    success: bool
-    data: dict[str, Any]
-    error: str | None = None
-
 class TriviaAPIClient:
-    ERROR_MESSAGES: ClassVar[dict[int, str]]
+    QUESTIONS_API_URL: str
+    SESSION_TOKEN_API_URL: str
+    ERROR_MESSAGES: dict[int, str]
 
-    def __init__(self, base_url: str, timeout: int = 10) -> None: ...
-    def _create_session(self) -> requests.Session: ...
+    def __init__(self, timeout: int = 10, retries: int = 3) -> None: ...
+    def _create_session(self, retries: int) -> requests.Session: ...
+    def _handle_response_code(self, data: dict[str, Any]) -> None: ...

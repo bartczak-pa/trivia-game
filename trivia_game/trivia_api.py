@@ -7,6 +7,9 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
+from .exceptions import InvalidParameterError, NoResultsError, RateLimitError, TokenError, TriviaAPIError
+from .models import TriviaResponseCode
+
 
 class TriviaResponse(TypedDict):
     response_code: int
@@ -21,24 +24,27 @@ class ResponseType:
 
 
 class TriviaAPIClient:
-    """Client for interacting with the trivia API."""
+    """Client for handling Trivia API interactions"""
+
+    QUESTIONS_API_URL: ClassVar[str] = "https://opentdb.com/api.php"
+    SESSION_TOKEN_API_URL: ClassVar[str] = "https://opentdb.com/api_token.php"
 
     ERROR_MESSAGES: ClassVar[dict[int, str]] = {
-        1: "No Results: The API doesn't have enough questions for your query.",
-        2: "Invalid Parameter: Arguments passed in aren't valid.",
-        3: "Token Not Found: Session Token does not exist.",
-        4: "Token Empty: Session Token is empty.",
-        5: "Rate Limit Exceeded: Too many requests.",
+        TriviaResponseCode.NO_RESULTS: "Not enough questions available for your query",
+        TriviaResponseCode.INVALID_PARAMETER: "Invalid parameters provided",
+        TriviaResponseCode.TOKEN_NOT_FOUND: "Session token not found",
+        TriviaResponseCode.TOKEN_EMPTY: "Token has returned all possible questions",
+        TriviaResponseCode.RATE_LIMIT: "Rate limit exceeded. Please wait 5 seconds",
     }
 
-    def __init__(self, base_url: str, timeout: int = 10, retires: int = 3) -> None:
-        self.base_url = base_url
+    def __init__(self, timeout: int = 10, retires: int = 3) -> None:
         self.timeout = timeout
         self.session = self._create_session(retires)
 
     def _create_session(self, retries: int) -> requests.Session:
-        """Create a session with retry strategy."""
+        """Create and configure requests session"""
         session: requests.Session = requests.Session()
+
         retry_strategy: Retry = Retry(
             total=retries,
             backoff_factor=5,
@@ -49,3 +55,27 @@ class TriviaAPIClient:
         session.mount("http://", adapter)
         session.mount("https://", adapter)
         return session
+
+    def _handle_response_code(self, data: dict[str, Any]) -> None:
+        """Handle response code from Trivia API"""
+        response_code: int | None = data.get("response_code")
+
+        if response_code is None:
+            msg: str = "Response code not found in API response"
+            raise TriviaAPIError(msg)
+
+        if response_code == TriviaResponseCode.SUCCESS:
+            return
+
+        error_message = self.ERROR_MESSAGES.get(response_code, f"Unknown error occurred: {response_code}")
+
+        if response_code == TriviaResponseCode.NO_RESULTS:
+            raise NoResultsError(error_message)
+        elif response_code == TriviaResponseCode.INVALID_PARAMETER:
+            raise InvalidParameterError(error_message)
+        elif response_code in (TriviaResponseCode.TOKEN_NOT_FOUND, TriviaResponseCode.TOKEN_EMPTY):
+            raise TokenError(error_message)
+        elif response_code == TriviaResponseCode.RATE_LIMIT:
+            raise RateLimitError(error_message)
+        else:
+            raise TriviaAPIError(error_message)

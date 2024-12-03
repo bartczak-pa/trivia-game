@@ -1,8 +1,10 @@
+import pytest
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-from trivia_game.trivia_api import ResponseType, TriviaAPIClient
+from trivia_game.exceptions import InvalidParameterError, NoResultsError, RateLimitError
+from trivia_game.models import TriviaResponseCode
 
 
 def test_create_session_configuration(trivia_client):
@@ -25,37 +27,17 @@ def test_create_session_configuration(trivia_client):
     assert retry.allowed_methods == ["GET"]
 
 
-def test_error_messages():
-    # Act & Assert
-    assert TriviaAPIClient.ERROR_MESSAGES[1] == "No Results: The API doesn't have enough questions for your query."
-    assert TriviaAPIClient.ERROR_MESSAGES[2] == "Invalid Parameter: Arguments passed in aren't valid."
-    assert TriviaAPIClient.ERROR_MESSAGES[3] == "Token Not Found: Session Token does not exist."
-    assert TriviaAPIClient.ERROR_MESSAGES[4] == "Token Empty: Session Token is empty."
-    assert TriviaAPIClient.ERROR_MESSAGES[5] == "Rate Limit Exceeded: Too many requests."
+@pytest.mark.parametrize(
+    "response_code,expected_exception,expected_message",
+    [
+        (TriviaResponseCode.NO_RESULTS, NoResultsError, "Not enough questions available for your query"),
+        (TriviaResponseCode.INVALID_PARAMETER, InvalidParameterError, "Invalid parameters provided"),
+        (TriviaResponseCode.RATE_LIMIT, RateLimitError, "Rate limit exceeded. Please wait 5 seconds"),
+    ],
+)
+def test_response_code_handling(trivia_client, response_code, expected_exception, expected_message):
+    """Test handling of different API response codes"""
+    mock_data = {"response_code": response_code}
 
-
-def test_response_type_success():
-    # Arrange
-    data = {"key": "value"}
-
-    # Act
-    response = ResponseType(success=True, data=data)
-
-    # Assert
-    assert response.success
-    assert response.data == data
-    assert response.error is None
-
-
-def test_response_type_error():
-    # Arrange
-    data = {}
-    error_message = "An error occurred"
-
-    # Act
-    response = ResponseType(success=False, data=data, error=error_message)
-
-    # Assert
-    assert not response.success
-    assert response.data == data
-    assert response.error == error_message
+    with pytest.raises(expected_exception, match=expected_message):
+        trivia_client._handle_response_code(mock_data)
