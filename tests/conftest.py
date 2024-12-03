@@ -1,9 +1,21 @@
+from unittest.mock import Mock
+
 import pytest
 
 from trivia_game.trivia_api import TriviaAPIClient
 
 
 @pytest.fixture
-def client():
-    """Return a TriviaAPIClient instance."""
-    return TriviaAPIClient("http://example.com/api")
+def trivia_client():
+    """Fixture for TriviaAPIClient instance"""
+    client = TriviaAPIClient("http://opentdb.com/api.php")
+    yield client
+    client.session.close()
+
+
+@pytest.fixture
+def mock_response():
+    """Fixture for mocked response"""
+    response = Mock()
+    response.raise_for_status.return_value = None
+    return response

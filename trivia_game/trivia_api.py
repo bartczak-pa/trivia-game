@@ -31,14 +31,20 @@ class TriviaAPIClient:
         5: "Rate Limit Exceeded: Too many requests.",
     }
 
-    def __init__(self, base_url: str, timeout: int = 10) -> None:
+    def __init__(self, base_url: str, timeout: int = 10, retires: int = 3) -> None:
         self.base_url = base_url
         self.timeout = timeout
+        self.session = self._create_session(retires)
 
-    def _create_session(self) -> requests.Session:
+    def _create_session(self, retries: int) -> requests.Session:
         """Create a session with retry strategy."""
         session: requests.Session = requests.Session()
-        retry_strategy: Retry = Retry(total=3, backoff_factor=5, status_forcelist=[429, 500, 502, 503, 504])
+        retry_strategy: Retry = Retry(
+            total=retries,
+            backoff_factor=5,
+            status_forcelist=[429, 500, 502, 503, 504],
+            allowed_methods=["GET"],
+        )
         adapter: HTTPAdapter = HTTPAdapter(max_retries=retry_strategy)
         session.mount("http://", adapter)
         session.mount("https://", adapter)
