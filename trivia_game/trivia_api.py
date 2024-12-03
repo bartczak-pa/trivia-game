@@ -79,3 +79,46 @@ class TriviaAPIClient:
             raise RateLimitError(error_message)
         else:
             raise TriviaAPIError(error_message)
+
+    def _make_request(self, url: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
+        """Make HTTP request with error handling"""
+
+        try:
+            response: requests.Response = self.session.get(url, params=params, timeout=self.timeout)
+            response.raise_for_status()
+            data: dict[str, Any] = response.json()
+
+            # Validate response code
+            self._handle_response_code(data)
+
+        except requests.exceptions.HTTPError as e:
+            status_code: int = e.response.status_code
+            error_msg: str = {
+                400: "Bad Request",
+                401: "Authentication required",
+                403: "Access denied",
+                404: "Resource not found",
+                429: "Rate limit exceeded",
+                500: "Internal Server Error",
+                502: "Bad Gateway",
+                503: "Service Unavailable",
+                504: "Gateway Timeout",
+            }.get(status_code, f"HTTP {status_code}")
+
+            msg = f"Request failed: {error_msg}"
+            raise TriviaAPIError(msg) from e
+
+        except requests.exceptions.ConnectionError as e:
+            connection_error_msg: str = "Request failed: Connection error"
+            raise TriviaAPIError(connection_error_msg) from e
+
+        except requests.exceptions.Timeout as e:
+            timeout_error_msg: str = "Request failed: Request timed out"
+            raise TriviaAPIError(timeout_error_msg) from e
+
+        except requests.exceptions.RequestException as e:
+            exception_error_msg: str = f"Request failed: {e!s}"
+            raise TriviaAPIError(exception_error_msg) from e
+
+        else:
+            return data
