@@ -1,4 +1,6 @@
 import pytest
+import requests
+from requests.adapters import HTTPAdapter
 
 from trivia_game.trivia_api import ResponseType, TriviaAPIClient
 
@@ -53,3 +55,44 @@ def test_response_type_error():
     assert not response.success
     assert response.data == data
     assert response.error == error_message
+
+
+@pytest.mark.parametrize(
+    "expected_retries, expected_backoff, expected_status_forcelist",
+    [
+        (3, 5, [429, 500, 502, 503, 504]),  # Default values
+    ],
+    ids=["default_retry_strategy"],
+)
+def test_create_session(client, expected_retries, expected_backoff, expected_status_forcelist):
+    # Act
+    session = client._create_session()
+
+    # Assert
+    adapter_http = session.get_adapter("http://")
+    adapter_https = session.get_adapter("https://")
+
+    assert isinstance(adapter_http, HTTPAdapter)
+    assert isinstance(adapter_https, HTTPAdapter)
+
+    # Check default retry strategy
+    assert adapter_http.max_retries.total == expected_retries
+    assert adapter_http.max_retries.backoff_factor == expected_backoff
+    assert adapter_http.max_retries.status_forcelist == expected_status_forcelist
+
+
+@pytest.mark.parametrize(
+    "invalid_url",
+    [
+        "ftp://",  # Error case with unsupported protocol
+        "file://",  # Error case with unsupported protocol
+    ],
+    ids=[
+        "unsupported_protocol_ftp",
+        "unsupported_protocol_file",
+    ],
+)
+def test_create_session_with_invalid_url(client, invalid_url):
+    # Act & Assert
+    with pytest.raises(requests.exceptions.InvalidSchema):
+        client._create_session().get_adapter(invalid_url)
