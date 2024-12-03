@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, TypedDict
+from typing import Any, ClassVar, TypedDict
 
 class TriviaResponse(TypedDict):
     response_code: int
@@ -10,3 +10,8 @@ class ResponseType:
     success: bool
     data: dict[str, Any]
     error: str | None = None
+
+class TriviaAPIClient:
+    ERROR_MESSAGES: ClassVar[dict[int, str]]
+
+    def __init__(self, base_url: str, timeout: int = 10) -> None: ...
