@@ -39,7 +39,9 @@ class TriviaAPIClient:
 
     def __init__(self, timeout: int = 10, retires: int = 3) -> None:
         self.timeout = timeout
+        self._session_token: str | None = None
         self.session = self._create_session(retires)
+        self._session_token = self.request_session_token()
 
     def _create_session(self, retries: int) -> requests.Session:
         """Create and configure requests session"""
