@@ -44,7 +44,14 @@ class TriviaAPIClient:
         self._session_token = self.request_session_token()
 
     def _create_session(self, retries: int) -> requests.Session:
-        """Create and configure requests session"""
+        """Create and configure requests session
+
+        Args:
+            retries (int): Number of retries for failed requests
+
+        Returns:
+            requests.Session: The configured session
+        """
         session: requests.Session = requests.Session()
 
         retry_strategy: Retry = Retry(
@@ -59,7 +66,21 @@ class TriviaAPIClient:
         return session
 
     def _handle_response_code(self, data: dict[str, Any]) -> None:
-        """Handle response code from Trivia API"""
+        """Handle response code from Trivia API
+
+        Args:
+            data (dict[str, Any]): The JSON response data
+
+        Raises:
+            TriviaAPIError: If an unknown error occurs
+            NoResultsError: If there are not enough questions available
+            InvalidParameterError: If invalid parameters are provided
+            TokenError: If a session token is not found or is empty
+            RateLimitError: If the rate limit is exceeded
+
+        Returns:
+            None
+        """
         response_code: int | None = data.get("response_code")
 
         if response_code is None:
@@ -83,7 +104,18 @@ class TriviaAPIClient:
             raise TriviaAPIError(error_message)
 
     def _make_request(self, url: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
-        """Make HTTP request with error handling"""
+        """Make HTTP request with error handling
+
+        Args:
+            url (str): The URL to make the request to
+            params (dict[str, Any], optional): Query parameters for the request. Defaults to None.
+
+        Raises:
+            TriviaAPIError: If the request fails
+
+        Returns:
+            dict[str, Any]: The JSON response data
+        """
 
         try:
             response: requests.Response = self.session.get(url, params=params, timeout=self.timeout)
@@ -126,7 +158,36 @@ class TriviaAPIClient:
             return data
 
     def request_session_token(self) -> str:
-        """Request a session token from the API"""
+        """Request a session token from the API
+
+        Raises:
+            TriviaAPIError: If the request fails
+
+        Returns:
+            str: The session token value
+        """
         params: dict[str, str] = {"command": "request"}
+        data: dict[str, Any] = self._make_request(self.SESSION_TOKEN_API_URL, params=params)
+        return cast(str, data["token"])
+
+    def reset_session_token(self) -> str:
+        """Reset the current session token.
+
+        This will wipe all progress/question history for the current token
+        but return the same token value. Use this when you've exhausted
+        all questions for a given category/difficulty combination.
+
+        Raises:
+            TokenError: If no active session token exists
+            TriviaAPIError: If the reset request fails
+
+        Returns:
+            str: The same token value, but with progress wiped
+        """
+        if not self._session_token:
+            msg: str = "Cannot reset: No active session token"
+            raise TokenError(msg)
+
+        params: dict[str, str] = {"command": "reset", "token": self._session_token}
         data: dict[str, Any] = self._make_request(self.SESSION_TOKEN_API_URL, params=params)
         return cast(str, data["token"])

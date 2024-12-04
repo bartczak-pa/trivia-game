@@ -175,3 +175,27 @@ def test_request_session_token_request_errors(trivia_client, exception_class, ex
 
         with pytest.raises(TriviaAPIError, match=expected_error):
             trivia_client.request_session_token()
+
+
+def test_reset_session_token_returns_same_token(trivia_client, mock_response):
+    """Test that token reset returns the same token but wipes progress"""
+    existing_token = "existing_token_123"
+    trivia_client._session_token = existing_token
+
+    mock_response.json.return_value = {
+        "response_code": 0,
+        "token": existing_token,  # Same token returned
+    }
+
+    with patch("requests.Session.get", return_value=mock_response) as mock_get:
+        token = trivia_client.reset_session_token()
+
+        # Verify same token is returned
+        assert token == existing_token
+
+        # Verify correct reset command was sent
+        mock_get.assert_called_once_with(
+            trivia_client.SESSION_TOKEN_API_URL,
+            params={"command": "reset", "token": existing_token},
+            timeout=trivia_client.timeout,
+        )
