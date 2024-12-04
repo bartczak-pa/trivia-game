@@ -307,7 +307,3 @@ class TriviaAPIClient:
             raise
         else:
             return [self._format_question(question) for question in data["results"]]
-
-
-client = TriviaAPIClient()
-print(client.fetch_questions())
