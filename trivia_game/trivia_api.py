@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 from typing import Any, ClassVar, TypedDict, cast
+from urllib.parse import unquote
 
 import requests
 from requests.adapters import HTTPAdapter
@@ -211,6 +212,18 @@ class TriviaAPIClient:
         params: dict[str, str] = {"command": "reset", "token": self._session_token}
         data: dict[str, Any] = self._make_request(self.SESSION_TOKEN_API_URL, params=params)
         return cast(str, data["token"])
+
+    @staticmethod
+    def _decode_text(text: str) -> str:
+        """Decode URL-encoded text
+
+        Args:
+            text (str): The URL-encoded text
+
+        Returns:
+            str: The decoded text
+        """
+        return unquote(text)
 
     def fetch_categories(self) -> dict[str, str]:
         """Fetch trivia categories from the API

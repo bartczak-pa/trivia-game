@@ -15,3 +15,13 @@ class TriviaResponseCode(IntEnum):
 class Category:
     id: int
     name: str
+
+
+@dataclass
+class Question:
+    type: str
+    difficulty: str
+    category: str
+    question: str
+    correct_answer: str
+    incorrect_answers: list[str]

@@ -263,3 +263,29 @@ class TestCategories:
             assert all(isinstance(name, str) and isinstance(id_, str) for name, id_ in categories.items())
         finally:
             client.session.close()
+
+
+@pytest.mark.parametrize(
+    "encoded,expected",
+    [
+        ("Hello%20World", "Hello World"),
+        ("Entertainment%3A%20Video%20Games", "Entertainment: Video Games"),
+        ("General%20Knowledge", "General Knowledge"),
+        ("Science%3A%20Computers", "Science: Computers"),
+        ("Entertainment%3A%20Books", "Entertainment: Books"),
+        ("%2B919999999999", "+919999999999"),
+        ("No%20encoding%20needed", "No encoding needed"),
+        ("", ""),  # Empty string case
+    ],
+)
+def test_decode_text(trivia_client, encoded, expected):
+    """Test URL decoding of different text patterns"""
+    decoded = trivia_client._decode_text(encoded)
+    assert decoded == expected
+
+
+def test_decode_text_already_decoded(trivia_client):
+    """Test decoding already decoded text"""
+    text = "Already decoded text"
+    decoded = trivia_client._decode_text(text)
+    assert decoded == text

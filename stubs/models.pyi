@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from enum import IntEnum
 
 class TriviaResponseCode(IntEnum):
@@ -7,3 +8,8 @@ class TriviaResponseCode(IntEnum):
     TOKEN_NOT_FOUND: int
     TOKEN_EMPTY: int
     RATE_LIMIT: int
+
+@dataclass
+class Category:
+    id: int
+    name: str
