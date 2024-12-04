@@ -16,7 +16,7 @@ from trivia_game.exceptions import (
     TokenError,
     TriviaAPIError,
 )
-from trivia_game.models import TriviaResponseCode
+from trivia_game.models import Question, TriviaResponseCode
 
 
 class TriviaResponse(TypedDict):
@@ -224,6 +224,24 @@ class TriviaAPIClient:
             str: The decoded text
         """
         return unquote(text)
+
+    def _format_question(self, data: dict[str, Any]) -> Question:
+        """Format and decode question data from API response
+
+        Args:
+            data (dict[str, Any]): The question data from the API
+
+        Returns:
+            Question: The formatted question object
+        """
+        return Question(
+            type=self._decode_text(data["type"]),
+            difficulty=self._decode_text(data["difficulty"]),
+            category=self._decode_text(data["category"]),
+            question=self._decode_text(data["question"]),
+            correct_answer=self._decode_text(data["correct_answer"]),
+            incorrect_answers=[self._decode_text(answer) for answer in data["incorrect_answers"]],
+        )
 
     def fetch_categories(self) -> dict[str, str]:
         """Fetch trivia categories from the API

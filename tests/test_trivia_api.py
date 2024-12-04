@@ -13,7 +13,7 @@ from trivia_game.exceptions import (
     TokenError,
     TriviaAPIError,
 )
-from trivia_game.models import TriviaResponseCode
+from trivia_game.models import Question, TriviaResponseCode
 from trivia_game.trivia_api import TriviaAPIClient
 
 
@@ -289,3 +289,23 @@ def test_decode_text_already_decoded(trivia_client):
     text = "Already decoded text"
     decoded = trivia_client._decode_text(text)
     assert decoded == text
+
+
+def test_format_question(trivia_client):
+    """Test question formatting and decoding"""
+    raw_data = {
+        "type": "multiple",
+        "difficulty": "medium",
+        "category": "Entertainment%3A%20Video%20Games",
+        "question": "Test%20Question%3F",
+        "correct_answer": "Correct%20Answer",
+        "incorrect_answers": ["Wrong%201", "Wrong%202"],
+    }
+
+    question = trivia_client._format_question(raw_data)
+
+    assert isinstance(question, Question)
+    assert question.category == "Entertainment: Video Games"
+    assert question.question == "Test Question?"
+    assert question.correct_answer == "Correct Answer"
+    assert question.incorrect_answers == ["Wrong 1", "Wrong 2"]

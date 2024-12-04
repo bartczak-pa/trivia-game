@@ -2,6 +2,8 @@ from typing import Any
 
 import requests
 
+from trivia_game.models import Question
+
 class TriviaAPIClient:
     QUESTIONS_API_URL: str
     SESSION_TOKEN_API_URL: str
@@ -18,3 +20,4 @@ class TriviaAPIClient:
     def fetch_categories(self) -> dict[str, str]: ...
     @staticmethod
     def _decode_text(text: str) -> str: ...
+    def _format_question(self, data: dict[str, Any]) -> Question: ...
