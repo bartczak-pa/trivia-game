@@ -46,6 +46,16 @@ class TriviaAPIClient:
     }
 
     def __init__(self, timeout: int = 10, retires: int = 3) -> None:
+        """Initialize the TriviaAPIClient
+
+        Args:
+            timeout (int, optional): Timeout for requests. Defaults to 10.
+            retires (int, optional): Number of retries for failed requests. Defaults to 3.
+
+        Returns:
+            None
+        """
+
         self.timeout = timeout
         self._session_token: str | None = None
         self.session = self._create_session(retires)
