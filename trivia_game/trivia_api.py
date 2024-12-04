@@ -38,9 +38,6 @@ class TriviaAPIClient:
         InvalidParameterError: If invalid parameters are provided
         TokenError: If a session token is not found or is empty
         RateLimitError: If the rate limit is exceeded
-
-    Returns:
-        None
     """
 
     QUESTIONS_API_URL: ClassVar[str] = "https://opentdb.com/api.php"
