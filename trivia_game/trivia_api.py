@@ -55,12 +55,12 @@ class TriviaAPIClient:
         TriviaResponseCode.RATE_LIMIT: "Rate limit exceeded. Please wait 5 seconds",
     }
 
-    def __init__(self, timeout: int = 10, retires: int = 3) -> None:
+    def __init__(self, timeout: int = 10, retries: int = 3) -> None:
         """Initialize the TriviaAPIClient
 
         Args:
             timeout (int, optional): Timeout for requests. Defaults to 10.
-            retires (int, optional): Number of retries for failed requests. Defaults to 3.
+            retries (int, optional): Number of retries for failed requests. Defaults to 3.
 
         Returns:
             None
@@ -68,7 +68,7 @@ class TriviaAPIClient:
 
         self.timeout = timeout
         self._session_token: str | None = None
-        self.session = self._create_session(retires)
+        self.session = self._create_session(retries)
         self._session_token = self.request_session_token()
         self.categories: dict[str, str] = {}
 
