@@ -7,7 +7,14 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-from trivia_game.exceptions import InvalidParameterError, NoResultsError, RateLimitError, TokenError, TriviaAPIError
+from trivia_game.exceptions import (
+    CategoryError,
+    InvalidParameterError,
+    NoResultsError,
+    RateLimitError,
+    TokenError,
+    TriviaAPIError,
+)
 from trivia_game.models import TriviaResponseCode
 
 
@@ -28,6 +35,7 @@ class TriviaAPIClient:
 
     QUESTIONS_API_URL: ClassVar[str] = "https://opentdb.com/api.php"
     SESSION_TOKEN_API_URL: ClassVar[str] = "https://opentdb.com/api_token.php"
+    CATEGORIES_API_URL: str = "https://opentdb.com/api_category.php"
 
     ERROR_MESSAGES: ClassVar[dict[int, str]] = {
         TriviaResponseCode.NO_RESULTS: "Not enough questions available for your query",
@@ -42,6 +50,7 @@ class TriviaAPIClient:
         self._session_token: str | None = None
         self.session = self._create_session(retires)
         self._session_token = self.request_session_token()
+        self.categories: dict[str, str] = {}
 
     def _create_session(self, retries: int) -> requests.Session:
         """Create and configure requests session
@@ -122,8 +131,9 @@ class TriviaAPIClient:
             response.raise_for_status()
             data: dict[str, Any] = response.json()
 
-            # Validate response code
-            self._handle_response_code(data)
+            # Only check response code for endpoints that return it
+            if "response_code" in data:
+                self._handle_response_code(data)
 
         except requests.exceptions.HTTPError as e:
             status_code: int = e.response.status_code
@@ -191,3 +201,33 @@ class TriviaAPIClient:
         params: dict[str, str] = {"command": "reset", "token": self._session_token}
         data: dict[str, Any] = self._make_request(self.SESSION_TOKEN_API_URL, params=params)
         return cast(str, data["token"])
+
+    def fetch_categories(self) -> dict[str, str]:
+        """Fetch trivia categories from the API
+
+        Raises:
+            CategoryError: If the request fails or no categories are found
+
+        Returns:
+            dict[str, str]: The categories as a dict of name: id
+        """
+
+        try:
+            data = self._make_request(self.CATEGORIES_API_URL)
+
+            if not data.get("trivia_categories"):
+                category_error_msg = "No categories found in API response"
+                raise CategoryError(category_error_msg)
+
+            self.categories = {
+                category["name"]: str(category["id"])
+                for category in data["trivia_categories"]
+                if category.get("name") and category.get("id")
+            }
+
+        except TriviaAPIError as e:
+            error_msg: str = f"Failed to fetch categories: {e!s}"
+            raise CategoryError(error_msg) from e
+
+        else:
+            return self.categories

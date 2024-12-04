@@ -29,3 +29,9 @@ class RateLimitError(TriviaAPIError):
     """Rate limit exceeded"""
 
     pass
+
+
+class CategoryError(TriviaAPIError):
+    """Exception for category-related errors"""
+
+    pass

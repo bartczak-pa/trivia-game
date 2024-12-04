@@ -5,8 +5,16 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-from trivia_game.exceptions import InvalidParameterError, NoResultsError, RateLimitError, TokenError, TriviaAPIError
+from trivia_game.exceptions import (
+    CategoryError,
+    InvalidParameterError,
+    NoResultsError,
+    RateLimitError,
+    TokenError,
+    TriviaAPIError,
+)
 from trivia_game.models import TriviaResponseCode
+from trivia_game.trivia_api import TriviaAPIClient
 
 
 def test_create_session_configuration(trivia_client):
@@ -199,3 +207,59 @@ def test_reset_session_token_returns_same_token(trivia_client, mock_response):
             params={"command": "reset", "token": existing_token},
             timeout=trivia_client.timeout,
         )
+
+
+class TestCategories:
+    def test_fetch_categories_success(self, trivia_client, mock_categories_response):
+        """Test successful categories fetch"""
+        with patch("requests.Session.get", return_value=mock_categories_response):
+            categories = trivia_client.fetch_categories()
+
+            assert len(categories) == 3
+            assert categories["General Knowledge"] == "9"
+            assert categories["Entertainment: Books"] == "10"
+            assert categories["Entertainment: Film"] == "11"
+
+    def test_fetch_categories_empty_response(self, trivia_client, mock_response):
+        """Test handling of empty categories response"""
+        mock_response.json.return_value = {"trivia_categories": []}
+
+        with patch("requests.Session.get", return_value=mock_response):
+            with pytest.raises(CategoryError, match="No categories found in API response"):
+                trivia_client.fetch_categories()
+
+    def test_fetch_categories_invalid_data(self, trivia_client, mock_response):
+        """Test handling of invalid category data"""
+        mock_response.json.return_value = {
+            "trivia_categories": [
+                {"id": 9},  # Missing name
+                {"name": "Invalid"},  # Missing id
+                {"id": 11, "name": "Valid Category"},
+            ]
+        }
+
+        with patch("requests.Session.get", return_value=mock_response):
+            categories = trivia_client.fetch_categories()
+
+            assert len(categories) == 1
+            assert categories["Valid Category"] == "11"
+
+    def test_fetch_categories_network_error(self, trivia_client):
+        """Test handling of network errors"""
+        with patch("requests.Session.get") as mock_get:
+            mock_get.side_effect = requests.exceptions.ConnectionError("Network error")
+
+            with pytest.raises(CategoryError, match="Failed to fetch categories: Request failed: Connection error"):
+                trivia_client.fetch_categories()
+
+    @pytest.mark.integration
+    def test_real_categories_fetch(self):
+        """Test fetching categories from actual API"""
+        client = TriviaAPIClient()
+        try:
+            categories = client.fetch_categories()
+
+            assert len(categories) > 0
+            assert all(isinstance(name, str) and isinstance(id_, str) for name, id_ in categories.items())
+        finally:
+            client.session.close()
