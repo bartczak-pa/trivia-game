@@ -5,7 +5,7 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-from trivia_game.exceptions import InvalidParameterError, NoResultsError, RateLimitError, TriviaAPIError
+from trivia_game.exceptions import InvalidParameterError, NoResultsError, RateLimitError, TokenError, TriviaAPIError
 from trivia_game.models import TriviaResponseCode
 
 
@@ -133,3 +133,45 @@ def test_make_request_timeout_configuration(trivia_client):
     with patch("requests.Session.get", return_value=mock_response) as mock_get:
         trivia_client._make_request("http://test.com")
         mock_get.assert_called_once_with("http://test.com", params=None, timeout=custom_timeout)
+
+
+@pytest.mark.parametrize(
+    "response_data,expected_token",
+    [
+        ({"response_code": 0, "token": "abc123"}, "abc123"),
+        ({"response_code": 0, "token": "xyz789"}, "xyz789"),
+    ],
+)
+def test_request_session_token_success(trivia_client, mock_response, response_data, expected_token):
+    """Test successful token request"""
+    mock_response.json.return_value = response_data
+
+    with patch("requests.Session.get", return_value=mock_response):
+        token = trivia_client.request_session_token()
+        assert token == expected_token
+
+
+def test_request_session_token_invalid_response(trivia_client, mock_response):
+    """Test token request with invalid response"""
+    mock_response.json.return_value = {"response_code": 3}
+
+    with patch("requests.Session.get", return_value=mock_response):
+        with pytest.raises(TokenError, match="Session token not found"):
+            trivia_client.request_session_token()
+
+
+@pytest.mark.parametrize(
+    "exception_class,expected_error",
+    [
+        (requests.exceptions.ConnectionError, "Request failed: Connection error"),
+        (requests.exceptions.Timeout, "Request failed: Request timed out"),
+        (requests.exceptions.RequestException, "Request failed: Generic error"),
+    ],
+)
+def test_request_session_token_request_errors(trivia_client, exception_class, expected_error):
+    """Test token request with various request errors"""
+    with patch("requests.Session.get") as mock_get:
+        mock_get.side_effect = exception_class("Generic error")
+
+        with pytest.raises(TriviaAPIError, match=expected_error):
+            trivia_client.request_session_token()

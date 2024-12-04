@@ -1,14 +1,14 @@
 """Module for interacting with the trivia API."""
 
 from dataclasses import dataclass
-from typing import Any, ClassVar, TypedDict
+from typing import Any, ClassVar, TypedDict, cast
 
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-from .exceptions import InvalidParameterError, NoResultsError, RateLimitError, TokenError, TriviaAPIError
-from .models import TriviaResponseCode
+from trivia_game.exceptions import InvalidParameterError, NoResultsError, RateLimitError, TokenError, TriviaAPIError
+from trivia_game.models import TriviaResponseCode
 
 
 class TriviaResponse(TypedDict):
@@ -122,3 +122,9 @@ class TriviaAPIClient:
 
         else:
             return data
+
+    def request_session_token(self) -> str:
+        """Request a session token from the API"""
+        params: dict[str, str] = {"command": "request"}
+        data: dict[str, Any] = self._make_request(self.SESSION_TOKEN_API_URL, params=params)
+        return cast(str, data["token"])
