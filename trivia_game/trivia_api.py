@@ -45,7 +45,7 @@ class TriviaAPIClient:
 
     QUESTIONS_API_URL: ClassVar[str] = "https://opentdb.com/api.php"
     SESSION_TOKEN_API_URL: ClassVar[str] = "https://opentdb.com/api_token.php"
-    CATEGORIES_API_URL: str = "https://opentdb.com/api_category.php"
+    CATEGORIES_API_URL: ClassVar[str] = "https://opentdb.com/api_category.php"
 
     ERROR_MESSAGES: ClassVar[dict[int, str]] = {
         TriviaResponseCode.NO_RESULTS: "Not enough questions available for your query",

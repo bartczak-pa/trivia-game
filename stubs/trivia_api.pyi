@@ -5,7 +5,7 @@ import requests
 class TriviaAPIClient:
     QUESTIONS_API_URL: ClassVar[str]
     SESSION_TOKEN_API_URL: ClassVar[str]
-    CATEGORIES_API_URL: str
+    CATEGORIES_API_URL: ClassVar[str]
 
     ERROR_MESSAGES: ClassVar[dict[int, str]]
 
