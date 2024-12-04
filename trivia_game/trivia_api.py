@@ -16,11 +16,32 @@ from trivia_game.exceptions import (
     TokenError,
     TriviaAPIError,
 )
-from trivia_game.models import Question, TriviaResponseCode
+from trivia_game.models import DifficultyType, Question, QuestionType, TriviaResponseCode
 
 
 class TriviaAPIClient:
-    """Client for handling Trivia API interactions"""
+    """Client for handling Trivia API interactions
+
+    Attributes:
+        QUESTIONS_API_URL (ClassVar[str]): The URL for fetching questions
+        SESSION_TOKEN_API_URL (ClassVar[str]): The URL for fetching session tokens
+        CATEGORIES_API_URL (str): The URL for fetching categories
+        ERROR_MESSAGES (ClassVar[dict[int, str]]): Error messages for API response codes
+
+    Args:
+        timeout (int, optional): Timeout for requests. Defaults to 10.
+        retries (int, optional): Number of retries for failed requests. Defaults to 3.
+
+    Raises:
+        TriviaAPIError: If an unknown error occurs
+        NoResultsError: If there are not enough questions available
+        InvalidParameterError: If invalid parameters are provided
+        TokenError: If a session token is not found or is empty
+        RateLimitError: If the rate limit is exceeded
+
+    Returns:
+        None
+    """
 
     QUESTIONS_API_URL: ClassVar[str] = "https://opentdb.com/api.php"
     SESSION_TOKEN_API_URL: ClassVar[str] = "https://opentdb.com/api_token.php"
@@ -120,6 +141,8 @@ class TriviaAPIClient:
 
         Raises:
             TriviaAPIError: If the request fails
+            TriviaAPIError: If the response code is not SUCCESS
+            TriviaAPIError: If the response is not valid JSON
 
         Returns:
             dict[str, Any]: The JSON response data
@@ -128,9 +151,13 @@ class TriviaAPIClient:
         try:
             response: requests.Response = self.session.get(url, params=params, timeout=self.timeout)
             response.raise_for_status()
-            data: dict[str, Any] = response.json()
 
-            # Only check response code for endpoints that return it
+            try:
+                data: dict[str, Any] = response.json()
+            except requests.exceptions.JSONDecodeError as e:
+                json_err_msg: str = f"Invalid JSON response: {e!s}"
+                raise TriviaAPIError(json_err_msg) from e
+
             if "response_code" in data:
                 self._handle_response_code(data)
 
@@ -147,21 +174,17 @@ class TriviaAPIClient:
                 503: "Service Unavailable",
                 504: "Gateway Timeout",
             }.get(status_code, f"HTTP {status_code}")
-
-            msg = f"Request failed: {error_msg}"
+            msg: str = f"Request failed: {error_msg}"
             raise TriviaAPIError(msg) from e
-
         except requests.exceptions.ConnectionError as e:
-            connection_error_msg: str = "Request failed: Connection error"
-            raise TriviaAPIError(connection_error_msg) from e
-
+            cnn_err_msg: str = "Request failed: Connection error"
+            raise TriviaAPIError(cnn_err_msg) from e
         except requests.exceptions.Timeout as e:
-            timeout_error_msg: str = "Request failed: Request timed out"
-            raise TriviaAPIError(timeout_error_msg) from e
-
+            timeout_err_msg: str = "Request failed: Request timed out"
+            raise TriviaAPIError(timeout_err_msg) from e
         except requests.exceptions.RequestException as e:
-            exception_error_msg: str = f"Request failed: {e!s}"
-            raise TriviaAPIError(exception_error_msg) from e
+            exc_msg: str = f"Request failed: {e!s}"
+            raise TriviaAPIError(exc_msg) from e
 
         else:
             return data
@@ -222,9 +245,15 @@ class TriviaAPIClient:
         Returns:
             Question: The formatted question object
         """
+        difficulty: str = self._decode_text(data["difficulty"])
+
+        if difficulty not in ("easy", "medium", "hard"):
+            difficulty_err_msg: str = f"Invalid difficulty value: {difficulty}"
+            raise InvalidParameterError(difficulty_err_msg)
+
         return Question(
-            type=self._decode_text(data["type"]),
-            difficulty=self._decode_text(data["difficulty"]),
+            type=cast(QuestionType, self._decode_text(data["type"])),
+            difficulty=cast(DifficultyType, difficulty),
             category=self._decode_text(data["category"]),
             question=self._decode_text(data["question"]),
             correct_answer=self._decode_text(data["correct_answer"]),
@@ -265,8 +294,8 @@ class TriviaAPIClient:
         self,
         amount: int = 10,
         category: str | None = None,
-        difficulty: str | None = None,
-        question_type: str | None = None,
+        difficulty: DifficultyType | None = None,
+        question_type: QuestionType | None = None,
     ) -> list[Question]:
         """Fetch trivia questions from the API.
 
@@ -279,10 +308,16 @@ class TriviaAPIClient:
         Raises:
             TokenError: If the session token has been exhausted
             TriviaAPIError: If the request fails
+            InvalidParameterError: If invalid parameters are provided
 
         Returns:
             list[Question]: The list of formatted question objects
         """
+
+        if amount < 1 or amount > 50:
+            msg: str = "Amount must be between 1 and 50"
+            raise InvalidParameterError(msg)
+
         params: dict[str, str | None] = {
             "amount": str(amount),
             "token": self._session_token,

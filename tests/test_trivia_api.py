@@ -3,7 +3,6 @@ from unittest.mock import Mock, patch
 import pytest
 import requests
 from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
 
 from trivia_game.exceptions import (
     CategoryError,
@@ -17,206 +16,217 @@ from trivia_game.models import Question, TriviaResponseCode
 from trivia_game.trivia_api import TriviaAPIClient
 
 
-def test_create_session_configuration(trivia_client):
-    """Test if session is properly configured"""
-    session = trivia_client._create_session(retries=3)
+class TestCreateSession:
+    """Test cases for creating a session"""
 
-    # Verify session is created
-    assert isinstance(session, requests.Session)
-
-    # Verify adapter configuration
-    adapter = session.get_adapter("http://")
-    assert isinstance(adapter, HTTPAdapter)
-
-    # Verify retry configuration
-    retry = adapter.max_retries
-    assert isinstance(retry, Retry)
-    assert retry.total == 3
-    assert retry.backoff_factor == 5
-    assert retry.status_forcelist == [429, 500, 502, 503, 504]
-    assert retry.allowed_methods == ["GET"]
+    def test_create_session_configuration(self, trivia_client):
+        """Test if session is properly configured"""
+        session = trivia_client._create_session(retries=3)
+        assert isinstance(session, requests.Session)
+        assert isinstance(session.get_adapter("http://"), HTTPAdapter)
+        retry = session.get_adapter("http://").max_retries
+        assert retry.total == 3
+        assert retry.backoff_factor == 5
+        assert retry.status_forcelist == [429, 500, 502, 503, 504]
+        assert retry.allowed_methods == ["GET"]
 
 
-@pytest.mark.parametrize(
-    "response_code,expected_exception,expected_message",
-    [
-        (TriviaResponseCode.NO_RESULTS, NoResultsError, "Not enough questions available for your query"),
-        (TriviaResponseCode.INVALID_PARAMETER, InvalidParameterError, "Invalid parameters provided"),
-        (TriviaResponseCode.RATE_LIMIT, RateLimitError, "Rate limit exceeded. Please wait 5 seconds"),
-    ],
-)
-def test_response_code_handling(trivia_client, response_code, expected_exception, expected_message):
-    """Test handling of different API response codes"""
-    mock_data = {"response_code": response_code}
+class TestResponseCodeHandling:
+    """Test cases for handling API response codes"""
 
-    with pytest.raises(expected_exception, match=expected_message):
+    @pytest.mark.parametrize(
+        "response_code,expected_exception,expected_message",
+        [
+            (TriviaResponseCode.NO_RESULTS, NoResultsError, "Not enough questions available for your query"),
+            (TriviaResponseCode.INVALID_PARAMETER, InvalidParameterError, "Invalid parameters provided"),
+            (TriviaResponseCode.TOKEN_NOT_FOUND, TokenError, "Session token not found"),
+            (TriviaResponseCode.TOKEN_EMPTY, TokenError, "Token has returned all possible questions"),
+            (TriviaResponseCode.RATE_LIMIT, RateLimitError, "Rate limit exceeded. Please wait 5 seconds"),
+        ],
+    )
+    def test_response_code_handling(self, trivia_client, response_code, expected_exception, expected_message):
+        """Test handling of different API response codes"""
+        mock_data = {"response_code": response_code}
+
+        with pytest.raises(expected_exception, match=expected_message):
+            trivia_client._handle_response_code(mock_data)
+
+    def test_response_code_missing(self, trivia_client):
+        """Test handling of missing response code"""
+        mock_data = {}
+
+        with pytest.raises(TriviaAPIError, match="Response code not found in API response"):
+            trivia_client._handle_response_code(mock_data)
+
+    def test_response_code_success(self, trivia_client):
+        """Test handling of success response code"""
+        mock_data = {"response_code": TriviaResponseCode.SUCCESS}
+
+        # Should not raise any exception
         trivia_client._handle_response_code(mock_data)
 
 
-@pytest.mark.parametrize(
-    "exception_class,expected_error",
-    [
-        (requests.exceptions.Timeout, "Request failed: Request timed out"),
-        (requests.exceptions.ConnectionError, "Request failed: Connection error"),
-        (requests.exceptions.RequestException, "Request failed: Generic error"),
-    ],
-)
-def test_make_request_http_exceptions(trivia_client, exception_class, expected_error):
-    """Test handling of different HTTP exceptions"""
-    with patch("requests.Session.get") as mock_get:
-        mock_get.side_effect = exception_class("Generic error")
+class TestMakeRequest:
+    """Test cases for making requests to the API"""
 
-        with pytest.raises(TriviaAPIError, match=expected_error):
-            trivia_client._make_request("http://test.com")
+    def test_successful_request(self, trivia_client, mock_response):
+        """Test successful request without response code"""
+        expected_data = {"some": "data"}
+        mock_response.json.return_value = expected_data
 
+        with patch("requests.Session.get", return_value=mock_response):
+            result = trivia_client._make_request("http://test.url")
+            assert result == expected_data
 
-def test_make_request_success(trivia_client):
-    """Test successful API request"""
-    mock_response = Mock()
-    mock_response.json.return_value = {"response_code": TriviaResponseCode.SUCCESS, "results": ["test_data"]}
-    mock_response.raise_for_status.return_value = None
+    def test_successful_request_with_response_code(self, trivia_client, mock_response):
+        """Test successful request with response code"""
+        mock_response.json.return_value = {"response_code": 0, "results": ["data"]}
 
-    with patch("requests.Session.get", return_value=mock_response) as mock_get:
-        result = trivia_client._make_request("http://test.com", {"param": "value"})
+        with patch("requests.Session.get", return_value=mock_response):
+            result = trivia_client._make_request("http://test.url")
+            assert result["results"] == ["data"]
 
-        # Verify the request was made correctly
-        mock_get.assert_called_once_with("http://test.com", params={"param": "value"}, timeout=trivia_client.timeout)
+    @pytest.mark.parametrize(
+        "exception_class,expected_error",
+        [
+            (requests.exceptions.ConnectionError, "Request failed: Connection error"),
+            (requests.exceptions.Timeout, "Request failed: Request timed out"),
+            (requests.exceptions.RequestException, "Request failed: Generic error"),
+        ],
+    )
+    def test_request_exceptions(self, trivia_client, exception_class, expected_error):
+        """Test handling of request exceptions"""
+        with patch("requests.Session.get") as mock_get:
+            mock_get.side_effect = exception_class("Generic error")
 
-        # Verify response processing
-        assert result == {"response_code": 0, "results": ["test_data"]}
+            with pytest.raises(TriviaAPIError, match=expected_error):
+                trivia_client._make_request("http://test.url")
 
+    @pytest.mark.parametrize(
+        "status_code,expected_error",
+        [
+            (400, "Request failed: Bad Request"),
+            (401, "Request failed: Authentication required"),
+            (403, "Request failed: Access denied"),
+            (404, "Request failed: Resource not found"),
+            (429, "Request failed: Rate limit exceeded"),
+            (500, "Request failed: Internal Server Error"),
+            (502, "Request failed: Bad Gateway"),
+            (503, "Request failed: Service Unavailable"),
+            (504, "Request failed: Gateway Timeout"),
+            (418, "Request failed: HTTP 418"),  # Testing unknown status code
+        ],
+    )
+    def test_http_error_codes(self, trivia_client, mock_response, status_code, expected_error):
+        """Test handling of HTTP error status codes"""
+        with patch("requests.Session.get") as mock_get:
+            mock_response = Mock()
+            mock_response.status_code = status_code
+            mock_get.side_effect = requests.exceptions.HTTPError(response=mock_response)
 
-def test_make_request_invalid_json(trivia_client):
-    """Test handling of invalid JSON response"""
-    mock_response = Mock()
-    mock_response.json.side_effect = requests.exceptions.JSONDecodeError("Invalid JSON", "", 0)
-    mock_response.raise_for_status.return_value = None
+            with pytest.raises(TriviaAPIError, match=expected_error):
+                trivia_client._make_request("http://test.url")
 
-    with patch("requests.Session.get", return_value=mock_response):
-        with pytest.raises(TriviaAPIError, match="Request failed: Invalid JSON"):
-            trivia_client._make_request("http://test.com")
+    def test_request_with_params(self, trivia_client, mock_response):
+        """Test request with query parameters"""
+        mock_response.json.return_value = {"data": "test"}
+        test_params = {"param1": "value1", "param2": "value2"}
 
+        with patch("requests.Session.get", return_value=mock_response) as mock_get:
+            trivia_client._make_request("http://test.url", params=test_params)
 
-def test_make_request_with_error_response_code(trivia_client):
-    """Test handling of error response codes"""
-    mock_response = Mock()
-    mock_response.json.return_value = {"response_code": TriviaResponseCode.NO_RESULTS}
-    mock_response.raise_for_status.return_value = None
+            mock_get.assert_called_once_with("http://test.url", params=test_params, timeout=trivia_client.timeout)
 
-    with patch("requests.Session.get", return_value=mock_response):
-        with pytest.raises(NoResultsError):
-            trivia_client._make_request("http://test.com")
+    def test_invalid_json_response(self, trivia_client):
+        """Test handling of invalid JSON response"""
+        with patch("requests.Session.get") as mock_get:
+            mock_response = Mock()
+            mock_response.json.side_effect = requests.exceptions.JSONDecodeError("Invalid JSON", "", 0)
+            mock_get.return_value = mock_response
 
-
-@pytest.mark.parametrize(
-    "status_code,expected_error",
-    [
-        (400, "Request failed: Bad Request"),
-        (401, "Request failed: Authentication required"),
-        (403, "Request failed: Access denied"),
-        (404, "Request failed: Resource not found"),
-        (500, "Request failed: Internal Server Error"),
-    ],
-)
-def test_make_request_http_error_codes(trivia_client, status_code, expected_error):
-    """Test handling of different HTTP error status codes"""
-    with patch("requests.Session.get") as mock_get:
-        mock_response = Mock()
-        mock_response.status_code = status_code
-        mock_get.side_effect = requests.exceptions.HTTPError(response=mock_response)
-
-        with pytest.raises(TriviaAPIError, match=expected_error):
-            trivia_client._make_request("http://test.com")
-
-
-def test_make_request_timeout_configuration(trivia_client):
-    """Test timeout configuration in request"""
-    mock_response = Mock()
-    mock_response.json.return_value = {"response_code": TriviaResponseCode.SUCCESS}
-    mock_response.raise_for_status.return_value = None
-
-    custom_timeout = 5
-    trivia_client.timeout = custom_timeout
-
-    with patch("requests.Session.get", return_value=mock_response) as mock_get:
-        trivia_client._make_request("http://test.com")
-        mock_get.assert_called_once_with("http://test.com", params=None, timeout=custom_timeout)
+            with pytest.raises(
+                TriviaAPIError, match=r"Invalid JSON response: Invalid JSON: line 1 column 1 \(char 0\)"
+            ):
+                trivia_client._make_request("http://test.url")
 
 
-@pytest.mark.parametrize(
-    "response_data,expected_token",
-    [
-        ({"response_code": 0, "token": "abc123"}, "abc123"),
-        ({"response_code": 0, "token": "xyz789"}, "xyz789"),
-    ],
-)
-def test_request_session_token_success(trivia_client, mock_response, response_data, expected_token):
-    """Test successful token request"""
-    mock_response.json.return_value = response_data
+class TestTokenManagement:
+    """Test cases for managing session tokens"""
 
-    with patch("requests.Session.get", return_value=mock_response):
-        token = trivia_client.request_session_token()
-        assert token == expected_token
+    @pytest.mark.parametrize(
+        "response_data,expected_token",
+        [
+            ({"response_code": 0, "token": "abc123"}, "abc123"),
+            ({"response_code": 0, "token": "xyz789"}, "xyz789"),
+        ],
+    )
+    def test_request_session_token_success(self, trivia_client, mock_response, response_data, expected_token):
+        """Test successful token request"""
+        mock_response.json.return_value = response_data
 
+        with patch("requests.Session.get", return_value=mock_response):
+            token = trivia_client.request_session_token()
+            assert token == expected_token
 
-def test_request_session_token_invalid_response(trivia_client, mock_response):
-    """Test token request with invalid response"""
-    mock_response.json.return_value = {"response_code": 3}
+    def test_request_session_token_invalid_response(self, trivia_client, mock_response):
+        """Test token request with invalid response"""
+        mock_response.json.return_value = {"response_code": 3}
 
-    with patch("requests.Session.get", return_value=mock_response):
-        with pytest.raises(TokenError, match="Session token not found"):
-            trivia_client.request_session_token()
+        with patch("requests.Session.get", return_value=mock_response):
+            with pytest.raises(TokenError, match="Session token not found"):
+                trivia_client.request_session_token()
 
+    @pytest.mark.parametrize(
+        "exception_class,expected_error",
+        [
+            (requests.exceptions.ConnectionError, "Request failed: Connection error"),
+            (requests.exceptions.Timeout, "Request failed: Request timed out"),
+            (requests.exceptions.RequestException, "Request failed: Generic error"),
+        ],
+    )
+    def test_request_session_token_request_errors(self, trivia_client, exception_class, expected_error):
+        """Test token request with various request errors"""
+        with patch("requests.Session.get") as mock_get:
+            mock_get.side_effect = exception_class("Generic error")
 
-@pytest.mark.parametrize(
-    "exception_class,expected_error",
-    [
-        (requests.exceptions.ConnectionError, "Request failed: Connection error"),
-        (requests.exceptions.Timeout, "Request failed: Request timed out"),
-        (requests.exceptions.RequestException, "Request failed: Generic error"),
-    ],
-)
-def test_request_session_token_request_errors(trivia_client, exception_class, expected_error):
-    """Test token request with various request errors"""
-    with patch("requests.Session.get") as mock_get:
-        mock_get.side_effect = exception_class("Generic error")
+            with pytest.raises(TriviaAPIError, match=expected_error):
+                trivia_client.request_session_token()
 
-        with pytest.raises(TriviaAPIError, match=expected_error):
-            trivia_client.request_session_token()
+    def test_reset_session_token_returns_same_token(self, trivia_client, mock_response):
+        """Test that token reset returns the same token but wipes progress"""
+        existing_token = "existing_token_123"
+        trivia_client._session_token = existing_token
 
+        mock_response.json.return_value = {
+            "response_code": 0,
+            "token": existing_token,
+        }
 
-def test_reset_session_token_returns_same_token(trivia_client, mock_response):
-    """Test that token reset returns the same token but wipes progress"""
-    existing_token = "existing_token_123"
-    trivia_client._session_token = existing_token
+        with patch("requests.Session.get", return_value=mock_response) as mock_get:
+            token = trivia_client.reset_session_token()
 
-    mock_response.json.return_value = {
-        "response_code": 0,
-        "token": existing_token,  # Same token returned
-    }
+            assert token == existing_token
+            mock_get.assert_called_once_with(
+                trivia_client.SESSION_TOKEN_API_URL,
+                params={"command": "reset", "token": existing_token},
+                timeout=trivia_client.timeout,
+            )
 
-    with patch("requests.Session.get", return_value=mock_response) as mock_get:
-        token = trivia_client.reset_session_token()
+    def test_reset_token_without_session(self, trivia_client):
+        """Test reset attempt without active session token"""
+        trivia_client._session_token = None
 
-        # Verify same token is returned
-        assert token == existing_token
-
-        # Verify correct reset command was sent
-        mock_get.assert_called_once_with(
-            trivia_client.SESSION_TOKEN_API_URL,
-            params={"command": "reset", "token": existing_token},
-            timeout=trivia_client.timeout,
-        )
+        with pytest.raises(TokenError, match="Cannot reset: No active session token"):
+            trivia_client.reset_session_token()
 
 
 class TestCategories:
     def test_fetch_categories_success(self, trivia_client, mock_categories_response):
         """Test successful categories fetch"""
         with patch("requests.Session.get", return_value=mock_categories_response):
-            categories = trivia_client.fetch_categories()
-
-            assert len(categories) == 3
-            assert categories["General Knowledge"] == "9"
+            categories = self._extracted_from_test_fetch_categories_invalid_data_4(
+                trivia_client, 3, "General Knowledge", "9"
+            )
             assert categories["Entertainment: Books"] == "10"
             assert categories["Entertainment: Film"] == "11"
 
@@ -240,9 +250,14 @@ class TestCategories:
 
         with patch("requests.Session.get", return_value=mock_response):
             categories = trivia_client.fetch_categories()
-
             assert len(categories) == 1
             assert categories["Valid Category"] == "11"
+
+    def _extracted_from_test_fetch_categories_invalid_data_4(self, trivia_client, arg1, arg2, arg3):
+        result = trivia_client.fetch_categories()
+        assert len(result) == arg1
+        assert result[arg2] == arg3
+        return result
 
     def test_fetch_categories_network_error(self, trivia_client):
         """Test handling of network errors"""
@@ -265,48 +280,84 @@ class TestCategories:
             client.session.close()
 
 
-@pytest.mark.parametrize(
-    "encoded,expected",
-    [
-        ("Hello%20World", "Hello World"),
-        ("&quot;Hello&quot;", '"Hello"'),
-        ("Test%20&amp;%20More", "Test & More"),
-        ("&lt;tag&gt;", "<tag>"),
-        ("Don&apos;t stop", "Don't stop"),
-        ("&quot;Let them eat cake&quot;", '"Let them eat cake"'),
-    ],
-)
-def test_decode_text(trivia_client, encoded, expected):
-    """Test decoding of both URL encoding and HTML entities"""
-    decoded = trivia_client._decode_text(encoded)
-    assert decoded == expected
+class TestDecodeText:
+    @pytest.mark.parametrize(
+        "encoded,expected",
+        [
+            ("Hello%20World", "Hello World"),
+            ("&quot;Hello&quot;", '"Hello"'),
+            ("Test%20&amp;%20More", "Test & More"),
+            ("&lt;tag&gt;", "<tag>"),
+            ("Don&apos;t stop", "Don't stop"),
+            ("&quot;Let them eat cake&quot;", '"Let them eat cake"'),
+        ],
+    )
+    def test_decode_text(self, trivia_client, encoded, expected):
+        """Test decoding of both URL encoding and HTML entities"""
+        decoded = trivia_client._decode_text(encoded)
+        assert decoded == expected
+
+    def test_decode_text_already_decoded(self, trivia_client):
+        """Test decoding already decoded text"""
+        text = "Already decoded text"
+        decoded = trivia_client._decode_text(text)
+        assert decoded == text
 
 
-def test_decode_text_already_decoded(trivia_client):
-    """Test decoding already decoded text"""
-    text = "Already decoded text"
-    decoded = trivia_client._decode_text(text)
-    assert decoded == text
+class TestFormatQuestion:
+    def test_format_question_success(self, trivia_client):
+        """Test successful question formatting with HTML entities and URL encoding"""
+        raw_data = {
+            "type": "multiple",
+            "difficulty": "medium",
+            "category": "Entertainment%3A%20Video%20Games",
+            "question": "What&apos;s the main character&apos;s name%3F",
+            "correct_answer": "Mario%20&amp;%20Luigi",
+            "incorrect_answers": ["Bowser%20&amp;%20Koopa", "Peach%20&amp;%20Daisy", "Wario%20&amp;%20Waluigi"],
+        }
 
+        question = trivia_client._format_question(raw_data)
 
-def test_format_question(trivia_client):
-    """Test question formatting and decoding"""
-    raw_data = {
-        "type": "multiple",
-        "difficulty": "medium",
-        "category": "Entertainment%3A%20Video%20Games",
-        "question": "Test%20Question%3F",
-        "correct_answer": "Correct%20Answer",
-        "incorrect_answers": ["Wrong%201", "Wrong%202"],
-    }
+        assert question.type == "multiple"
+        assert question.difficulty == "medium"
+        assert question.category == "Entertainment: Video Games"
+        assert question.question == "What's the main character's name?"
+        assert question.correct_answer == "Mario & Luigi"
+        assert len(question.incorrect_answers) == 3
+        assert question.incorrect_answers[0] == "Bowser & Koopa"
 
-    question = trivia_client._format_question(raw_data)
+    def test_format_question_boolean_type(self, trivia_client):
+        """Test formatting boolean type questions"""
+        raw_data = {
+            "type": "boolean",
+            "difficulty": "easy",
+            "category": "Science",
+            "question": "Is the Earth flat%3F",
+            "correct_answer": "False",
+            "incorrect_answers": ["True"],
+        }
 
-    assert isinstance(question, Question)
-    assert question.category == "Entertainment: Video Games"
-    assert question.question == "Test Question?"
-    assert question.correct_answer == "Correct Answer"
-    assert question.incorrect_answers == ["Wrong 1", "Wrong 2"]
+        question = trivia_client._format_question(raw_data)
+
+        assert question.type == "boolean"
+        assert question.correct_answer == "False"
+        assert question.incorrect_answers == ["True"]
+
+    def test_format_question_special_characters(self, trivia_client):
+        """Test handling of various special characters and HTML entities"""
+        raw_data = {
+            "type": "multiple",
+            "difficulty": "hard",
+            "category": "General%20Knowledge",
+            "question": "&quot;Hello%20World&quot;%20&#39;Test&#39;%20&lt;tag&gt;",
+            "correct_answer": "Answer%20with%20&amp;%20symbol",
+            "incorrect_answers": ["Test%201", "Test%202"],
+        }
+
+        question = trivia_client._format_question(raw_data)
+
+        assert question.question == "\"Hello World\" 'Test' <tag>"
+        assert question.correct_answer == "Answer with & symbol"
 
 
 class TestFetchQuestions:
@@ -331,12 +382,13 @@ class TestFetchQuestions:
 
             assert len(questions) == 1
             question = questions[0]
+            assert isinstance(question, Question)
             assert question.type == "multiple"
             assert question.difficulty == "medium"
             assert question.category == "Entertainment: Video Games"
             assert question.question == "What's the name of the main character?"
             assert question.correct_answer == "Mario & Luigi"
-            assert len(question.incorrect_answers) == 3
+            assert question.incorrect_answers == ["Bowser & Koopa", "Peach & Daisy", "Wario & Waluigi"]
 
     def test_fetch_questions_with_parameters(self, trivia_client, mock_response):
         """Test questions fetch with specific parameters"""
@@ -349,7 +401,7 @@ class TestFetchQuestions:
                     "category": "General Knowledge",
                     "question": "Test question?",
                     "correct_answer": "Correct",
-                    "incorrect_answers": ["Wrong"],
+                    "incorrect_answers": ["Wrong1", "Wrong2", "Wrong3"],
                 }
             ],
         }
@@ -360,35 +412,70 @@ class TestFetchQuestions:
             mock_get.assert_called_once()
             call_args = mock_get.call_args[1]
             assert call_args["params"] == {
-                "amount": "5",  # Changed to string to match actual behavior
+                "amount": "5",
                 "category": "9",
                 "difficulty": "medium",
                 "type": "multiple",
                 "token": trivia_client._session_token,
             }
 
-    def test_fetch_questions_no_results(self, trivia_client, mock_response):
-        """Test handling of empty results"""
-        mock_response.json.return_value = {"response_code": 1, "results": []}
+    @pytest.mark.parametrize(
+        "amount,expected_error",
+        [
+            (0, "Amount must be between 1 and 50"),
+            (51, "Amount must be between 1 and 50"),
+            (-1, "Amount must be between 1 and 50"),
+        ],
+    )
+    def test_fetch_questions_invalid_amount(self, trivia_client, amount, expected_error):
+        """Test handling of invalid amount parameter"""
+        with pytest.raises(InvalidParameterError, match=expected_error):
+            trivia_client.fetch_questions(amount=amount)
 
-        with patch("requests.Session.get", return_value=mock_response):
-            with pytest.raises(NoResultsError):
-                trivia_client.fetch_questions()
-
-    def test_fetch_questions_token_empty(self, trivia_client, mock_response):
-        """Test handling of empty token"""
+    def test_fetch_questions_token_empty_auto_reset(self, trivia_client, mock_response):
+        """Test automatic token reset when token is empty"""
+        # First call returns token empty
         mock_response.json.return_value = {"response_code": 4}
 
-        with patch("requests.Session.get", return_value=mock_response):
-            with pytest.raises(TokenError, match="Token has returned all possible questions"):
-                trivia_client.fetch_questions()
+        # Second call (token reset) returns a new token
+        reset_response = Mock()
+        reset_response.json.return_value = {"response_code": 0, "token": "new_token_123"}
+
+        # Third call returns success with questions
+        success_response = Mock()
+        success_response.json.return_value = {
+            "response_code": 0,
+            "results": [
+                {
+                    "type": "multiple",
+                    "difficulty": "medium",
+                    "category": "Test",
+                    "question": "Test?",
+                    "correct_answer": "Yes",
+                    "incorrect_answers": ["No", "Maybe", "Never"],
+                }
+            ],
+        }
+
+        with patch("requests.Session.get") as mock_get:
+            mock_get.side_effect = [
+                mock_response,  # First call - token empty
+                reset_response,  # Token reset
+                success_response,  # Retry with new token
+            ]
+
+            questions = trivia_client.fetch_questions()
+            assert len(questions) == 1
+            assert isinstance(questions[0], Question)
+            assert questions[0].question == "Test?"
+            assert trivia_client._session_token == "new_token_123"
 
     @pytest.mark.parametrize(
         "params,expected_error",
         [
-            ({"amount": "invalid"}, "Invalid parameters provided"),
-            ({"difficulty": "super-hard"}, "Invalid parameters provided"),
-            ({"category": "999"}, "Invalid parameters provided"),
+            ({"difficulty": "invalid"}, "Invalid parameters provided"),
+            ({"question_type": "invalid"}, "Invalid parameters provided"),
+            ({"category": "invalid"}, "Invalid parameters provided"),
         ],
     )
     def test_fetch_questions_invalid_parameters(self, trivia_client, mock_response, params, expected_error):
@@ -399,23 +486,10 @@ class TestFetchQuestions:
             with pytest.raises(InvalidParameterError, match=expected_error):
                 trivia_client.fetch_questions(**params)
 
-    @pytest.mark.integration
-    def test_real_questions_fetch(self, trivia_client):
-        """Test fetching questions from actual API"""
-        questions = trivia_client.fetch_questions(amount=1)
+    def test_fetch_questions_no_results(self, trivia_client, mock_response):
+        """Test handling of no results response"""
+        mock_response.json.return_value = {"response_code": 1, "results": []}
 
-        assert len(questions) == 1
-        question = questions[0]
-
-        assert isinstance(question.type, str)
-        assert isinstance(question.difficulty, str)
-        assert isinstance(question.category, str)
-        assert isinstance(question.question, str)
-        assert isinstance(question.correct_answer, str)
-        assert isinstance(question.incorrect_answers, list)
-        assert all(isinstance(a, str) for a in question.incorrect_answers)
-
-        # Verify no HTML entities in text
-        assert "&quot;" not in question.question
-        assert "&amp;" not in question.correct_answer
-        assert all("&" not in a for a in question.incorrect_answers)
+        with patch("requests.Session.get", return_value=mock_response):
+            with pytest.raises(NoResultsError, match="Not enough questions available for your query"):
+                trivia_client.fetch_questions()

@@ -1,7 +1,9 @@
-from dataclasses import dataclass
-from enum import IntEnum
+from typing import Literal, TypedDict
 
-class TriviaResponseCode(IntEnum):
+DifficultyType = Literal["easy", "medium", "hard"]
+QuestionType = Literal["multiple", "boolean"]
+
+class TriviaResponseCode:
     SUCCESS: int
     NO_RESULTS: int
     INVALID_PARAMETER: int
@@ -9,15 +11,9 @@ class TriviaResponseCode(IntEnum):
     TOKEN_EMPTY: int
     RATE_LIMIT: int
 
-@dataclass
-class Category:
-    id: int
-    name: str
-
-@dataclass
-class Question:
-    type: str
-    difficulty: str
+class Question(TypedDict):
+    type: QuestionType
+    difficulty: DifficultyType
     category: str
     question: str
     correct_answer: str

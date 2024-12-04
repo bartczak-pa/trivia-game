@@ -1,15 +1,13 @@
-from typing import Any
+from typing import Any, ClassVar
 
 import requests
 
-from trivia_game.models import Question
-
 class TriviaAPIClient:
-    QUESTIONS_API_URL: str
-    SESSION_TOKEN_API_URL: str
+    QUESTIONS_API_URL: ClassVar[str]
+    SESSION_TOKEN_API_URL: ClassVar[str]
     CATEGORIES_API_URL: str
 
-    ERROR_MESSAGES: dict[int, str]
+    ERROR_MESSAGES: ClassVar[dict[int, str]]
 
     def __init__(self, timeout: int = 10, retries: int = 3) -> None: ...
     def _create_session(self, retries: int) -> requests.Session: ...
@@ -18,13 +16,13 @@ class TriviaAPIClient:
     def request_session_token(self) -> str: ...
     def reset_session_token(self) -> str: ...
     def fetch_categories(self) -> dict[str, str]: ...
-    @staticmethod
-    def _decode_text(text: str) -> str: ...
-    def _format_question(self, data: dict[str, Any]) -> Question: ...
     def fetch_questions(
         self,
         amount: int = 10,
         category: str | None = None,
         difficulty: str | None = None,
         question_type: str | None = None,
-    ) -> list[Question]: ...
+    ) -> list[Any]: ...
+    @staticmethod
+    def _decode_text(text: str) -> str: ...
+    def _format_question(self, data: dict[str, Any]) -> Any: ...
