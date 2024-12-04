@@ -21,3 +21,10 @@ class TriviaAPIClient:
     @staticmethod
     def _decode_text(text: str) -> str: ...
     def _format_question(self, data: dict[str, Any]) -> Question: ...
+    def fetch_questions(
+        self,
+        amount: int = 10,
+        category: str | None = None,
+        difficulty: str | None = None,
+        question_type: str | None = None,
+    ) -> list[Question]: ...

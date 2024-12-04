@@ -269,17 +269,15 @@ class TestCategories:
     "encoded,expected",
     [
         ("Hello%20World", "Hello World"),
-        ("Entertainment%3A%20Video%20Games", "Entertainment: Video Games"),
-        ("General%20Knowledge", "General Knowledge"),
-        ("Science%3A%20Computers", "Science: Computers"),
-        ("Entertainment%3A%20Books", "Entertainment: Books"),
-        ("%2B919999999999", "+919999999999"),
-        ("No%20encoding%20needed", "No encoding needed"),
-        ("", ""),  # Empty string case
+        ("&quot;Hello&quot;", '"Hello"'),
+        ("Test%20&amp;%20More", "Test & More"),
+        ("&lt;tag&gt;", "<tag>"),
+        ("Don&apos;t stop", "Don't stop"),
+        ("&quot;Let them eat cake&quot;", '"Let them eat cake"'),
     ],
 )
 def test_decode_text(trivia_client, encoded, expected):
-    """Test URL decoding of different text patterns"""
+    """Test decoding of both URL encoding and HTML entities"""
     decoded = trivia_client._decode_text(encoded)
     assert decoded == expected
 
@@ -309,3 +307,115 @@ def test_format_question(trivia_client):
     assert question.question == "Test Question?"
     assert question.correct_answer == "Correct Answer"
     assert question.incorrect_answers == ["Wrong 1", "Wrong 2"]
+
+
+class TestFetchQuestions:
+    def test_fetch_questions_success(self, trivia_client, mock_response):
+        """Test successful questions fetch with default parameters"""
+        mock_response.json.return_value = {
+            "response_code": 0,
+            "results": [
+                {
+                    "type": "multiple",
+                    "difficulty": "medium",
+                    "category": "Entertainment: Video Games",
+                    "question": "What&apos;s the name of the main character?",
+                    "correct_answer": "Mario &amp; Luigi",
+                    "incorrect_answers": ["Bowser &amp; Koopa", "Peach &amp; Daisy", "Wario &amp; Waluigi"],
+                }
+            ],
+        }
+
+        with patch("requests.Session.get", return_value=mock_response):
+            questions = trivia_client.fetch_questions()
+
+            assert len(questions) == 1
+            question = questions[0]
+            assert question.type == "multiple"
+            assert question.difficulty == "medium"
+            assert question.category == "Entertainment: Video Games"
+            assert question.question == "What's the name of the main character?"
+            assert question.correct_answer == "Mario & Luigi"
+            assert len(question.incorrect_answers) == 3
+
+    def test_fetch_questions_with_parameters(self, trivia_client, mock_response):
+        """Test questions fetch with specific parameters"""
+        mock_response.json.return_value = {
+            "response_code": 0,
+            "results": [
+                {
+                    "type": "multiple",
+                    "difficulty": "medium",
+                    "category": "General Knowledge",
+                    "question": "Test question?",
+                    "correct_answer": "Correct",
+                    "incorrect_answers": ["Wrong"],
+                }
+            ],
+        }
+
+        with patch("requests.Session.get", return_value=mock_response) as mock_get:
+            trivia_client.fetch_questions(amount=5, category="9", difficulty="medium", question_type="multiple")
+
+            mock_get.assert_called_once()
+            call_args = mock_get.call_args[1]
+            assert call_args["params"] == {
+                "amount": "5",  # Changed to string to match actual behavior
+                "category": "9",
+                "difficulty": "medium",
+                "type": "multiple",
+                "token": trivia_client._session_token,
+            }
+
+    def test_fetch_questions_no_results(self, trivia_client, mock_response):
+        """Test handling of empty results"""
+        mock_response.json.return_value = {"response_code": 1, "results": []}
+
+        with patch("requests.Session.get", return_value=mock_response):
+            with pytest.raises(NoResultsError):
+                trivia_client.fetch_questions()
+
+    def test_fetch_questions_token_empty(self, trivia_client, mock_response):
+        """Test handling of empty token"""
+        mock_response.json.return_value = {"response_code": 4}
+
+        with patch("requests.Session.get", return_value=mock_response):
+            with pytest.raises(TokenError, match="Token has returned all possible questions"):
+                trivia_client.fetch_questions()
+
+    @pytest.mark.parametrize(
+        "params,expected_error",
+        [
+            ({"amount": "invalid"}, "Invalid parameters provided"),
+            ({"difficulty": "super-hard"}, "Invalid parameters provided"),
+            ({"category": "999"}, "Invalid parameters provided"),
+        ],
+    )
+    def test_fetch_questions_invalid_parameters(self, trivia_client, mock_response, params, expected_error):
+        """Test handling of invalid parameters"""
+        mock_response.json.return_value = {"response_code": 2}
+
+        with patch("requests.Session.get", return_value=mock_response):
+            with pytest.raises(InvalidParameterError, match=expected_error):
+                trivia_client.fetch_questions(**params)
+
+    @pytest.mark.integration
+    def test_real_questions_fetch(self, trivia_client):
+        """Test fetching questions from actual API"""
+        questions = trivia_client.fetch_questions(amount=1)
+
+        assert len(questions) == 1
+        question = questions[0]
+
+        assert isinstance(question.type, str)
+        assert isinstance(question.difficulty, str)
+        assert isinstance(question.category, str)
+        assert isinstance(question.question, str)
+        assert isinstance(question.correct_answer, str)
+        assert isinstance(question.incorrect_answers, list)
+        assert all(isinstance(a, str) for a in question.incorrect_answers)
+
+        # Verify no HTML entities in text
+        assert "&quot;" not in question.question
+        assert "&amp;" not in question.correct_answer
+        assert all("&" not in a for a in question.incorrect_answers)

@@ -1,7 +1,7 @@
 """Module for interacting with the trivia API."""
 
-from dataclasses import dataclass
-from typing import Any, ClassVar, TypedDict, cast
+import html
+from typing import Any, ClassVar, cast
 from urllib.parse import unquote
 
 import requests
@@ -17,18 +17,6 @@ from trivia_game.exceptions import (
     TriviaAPIError,
 )
 from trivia_game.models import Question, TriviaResponseCode
-
-
-class TriviaResponse(TypedDict):
-    response_code: int
-    results: list[dict[str, Any]]
-
-
-@dataclass(frozen=True)
-class ResponseType:
-    success: bool
-    data: dict[str, Any]
-    error: str | None = None
 
 
 class TriviaAPIClient:
@@ -223,7 +211,7 @@ class TriviaAPIClient:
         Returns:
             str: The decoded text
         """
-        return unquote(text)
+        return html.unescape(unquote(text))
 
     def _format_question(self, data: dict[str, Any]) -> Question:
         """Format and decode question data from API response
@@ -272,3 +260,54 @@ class TriviaAPIClient:
 
         else:
             return self.categories
+
+    def fetch_questions(
+        self,
+        amount: int = 10,
+        category: str | None = None,
+        difficulty: str | None = None,
+        question_type: str | None = None,
+    ) -> list[Question]:
+        """Fetch trivia questions from the API.
+
+        Args:
+            amount (int, optional): The number of questions to fetch. Defaults to 10.
+            category (str, optional): The category to fetch questions from. Defaults to None.
+            difficulty (str, optional): The difficulty level of the questions. Defaults to None.
+            question_type (str, optional): The type of questions to fetch. Defaults to None.
+
+        Raises:
+            TokenError: If the session token has been exhausted
+            TriviaAPIError: If the request fails
+
+        Returns:
+            list[Question]: The list of formatted question objects
+        """
+        params: dict[str, str | None] = {
+            "amount": str(amount),
+            "token": self._session_token,
+        }
+
+        if category:
+            params["category"] = category
+        if difficulty:
+            params["difficulty"] = difficulty
+        if question_type:
+            params["type"] = question_type
+
+        try:
+            data: dict[str, Any] = self._make_request(self.QUESTIONS_API_URL, params=params)
+
+        except TokenError as e:
+            if "Token has returned all possible questions" in str(e):
+                self._session_token = self.reset_session_token()
+                return self.fetch_questions(
+                    amount=amount, category=category, difficulty=difficulty, question_type=question_type
+                )
+            raise
+        else:
+            return [self._format_question(question) for question in data["results"]]
+
+
+client = TriviaAPIClient()
+print(client.fetch_questions())
