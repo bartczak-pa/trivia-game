@@ -320,7 +320,6 @@ class TriviaAPIClient:
         category: str | None = None,
         difficulty: DifficultyType | None = None,
         question_type: QuestionType | None = None,
-        _retry_count: int = 0,
         max_retries: int = 3,
     ) -> list[Question]:
         """Fetch trivia questions from the API.
@@ -330,7 +329,6 @@ class TriviaAPIClient:
             category (str, optional): The category to fetch questions from. Defaults to None.
             difficulty (str, optional): The difficulty level of the questions. Defaults to None.
             question_type (str, optional): The type of questions to fetch. Defaults to None.
-            _retry_count (int, optional): The current retry count for token reset. Defaults to 0.
             max_retries (int, optional): The maximum number of retries for token reset. Defaults to 3.
         Raises:
             InvalidParameterError: If invalid parameters are provided
@@ -358,30 +356,24 @@ class TriviaAPIClient:
         if question_type:
             params["type"] = question_type
 
-        try:
-            data: dict[str, Any] = self._make_request(self.QUESTIONS_API_URL, params=params)
+        retry_count: int = 0
+        retry_count_err_msg: str = "Maximum retry attempts reached for token reset"
 
-        except TokenError as e:
-            if "Token has returned all possible questions" not in str(e):
-                raise
+        while retry_count <= max_retries:
+            try:
+                data: dict[str, Any] = self._make_request(self.QUESTIONS_API_URL, params=params)
 
-            if _retry_count >= max_retries:
-                retry_count_err_msg: str = "Maximum retry attempts reached for token reset"
-                raise TokenError(retry_count_err_msg) from e
+            except TokenError as e:
+                if "Token has returned all possible questions" not in str(e):
+                    raise
+                if retry_count >= max_retries:
+                    raise TokenError(retry_count_err_msg) from e
+                self._session_token = self.reset_session_token()
+                retry_count += 1
+            else:
+                return [self._format_question(question) for question in data["results"]]
 
-            self._session_token = self.reset_session_token()
-
-            return self.fetch_questions(
-                amount=amount,
-                category=category,
-                difficulty=difficulty,
-                question_type=question_type,
-                _retry_count=_retry_count + 1,
-                max_retries=max_retries,
-            )
-
-        else:
-            return [self._format_question(question) for question in data["results"]]
+        raise TokenError(retry_count_err_msg)
 
     def __enter__(self) -> "TriviaAPIClient":
         """Enter context manager

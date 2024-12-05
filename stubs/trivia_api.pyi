@@ -26,7 +26,6 @@ class TriviaAPIClient:
         category: str | None = None,
         difficulty: str | None = None,
         question_type: str | None = None,
-        _retry_count: int = 0,
         max_retries: int = 3,
     ) -> list[Any]: ...
     @staticmethod
