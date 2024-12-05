@@ -52,6 +52,25 @@ class TriviaAPIClient:
         TriviaResponseCode.RATE_LIMIT: "Rate limit exceeded. Please wait 5 seconds",
     }
 
+    HTTP_ERROR_MAPPING: ClassVar[dict[int, tuple[type[Exception], str]]] = {
+        400: (InvalidParameterError, "Bad Request"),
+        401: (TriviaAPIError, "Authentication required"),
+        403: (TriviaAPIError, "Access denied"),
+        404: (TriviaAPIError, "Resource not found"),
+        429: (RateLimitError, "Rate limit exceeded"),
+        500: (TriviaAPIError, "Internal Server Error"),
+        502: (TriviaAPIError, "Bad Gateway"),
+        503: (TriviaAPIError, "Service Unavailable"),
+        504: (TriviaAPIError, "Gateway Timeout"),
+    }
+
+    REQUEST_ERROR_MAPPING: ClassVar[dict[type[Exception], tuple[type[Exception], str]]] = {
+        requests.exceptions.ConnectionError: (TriviaAPIError, "Connection error"),
+        requests.exceptions.Timeout: (TriviaAPIError, "Request timed out"),
+        requests.exceptions.JSONDecodeError: (TriviaAPIError, "Invalid JSON response"),
+        requests.exceptions.RequestException: (TriviaAPIError, "Generic error"),
+    }
+
     def __init__(self, timeout: int = 10, retries: int = 3) -> None:
         """Initialize the TriviaAPIClient
 
@@ -131,24 +150,6 @@ class TriviaAPIClient:
 
     def _make_request(self, url: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
         """Make HTTP request with error handling"""
-        http_error_mapping: dict[int, tuple[type[Exception], str]] = {
-            400: (InvalidParameterError, "Bad Request"),
-            401: (TriviaAPIError, "Authentication required"),
-            403: (TriviaAPIError, "Access denied"),
-            404: (TriviaAPIError, "Resource not found"),
-            429: (RateLimitError, "Rate limit exceeded"),
-            500: (TriviaAPIError, "Internal Server Error"),
-            502: (TriviaAPIError, "Bad Gateway"),
-            503: (TriviaAPIError, "Service Unavailable"),
-            504: (TriviaAPIError, "Gateway Timeout"),
-        }
-
-        request_error_mapping: dict[type[Exception], tuple[type[Exception], str]] = {
-            requests.exceptions.ConnectionError: (TriviaAPIError, "Connection error"),
-            requests.exceptions.Timeout: (TriviaAPIError, "Request timed out"),
-            requests.exceptions.JSONDecodeError: (TriviaAPIError, "Invalid JSON response"),
-            requests.exceptions.RequestException: (TriviaAPIError, "Generic error"),
-        }
 
         try:
             response: requests.Response = self.session.get(url, params=params, timeout=self.timeout)
@@ -169,12 +170,12 @@ class TriviaAPIClient:
 
         except requests.exceptions.HTTPError as e:
             status_code: int = e.response.status_code
-            error_class, error_msg = http_error_mapping.get(status_code, (TriviaAPIError, f"HTTP {status_code}"))
+            error_class, error_msg = self.HTTP_ERROR_MAPPING.get(status_code, (TriviaAPIError, f"HTTP {status_code}"))
             http_err_msg: str = f"Request failed: {error_msg}"
             raise error_class(http_err_msg) from e
 
-        except tuple(request_error_mapping.keys()) as e:
-            error_class, error_msg = request_error_mapping[type(e)]
+        except tuple(self.REQUEST_ERROR_MAPPING.keys()) as e:
+            error_class, error_msg = self.REQUEST_ERROR_MAPPING[type(e)]
             request_err_msg: str = f"Request failed: {error_msg}"
             raise error_class(request_err_msg) from e
 

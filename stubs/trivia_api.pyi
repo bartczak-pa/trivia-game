@@ -9,6 +9,9 @@ class TriviaAPIClient:
 
     ERROR_MESSAGES: ClassVar[dict[int, str]]
 
+    HTTP_ERROR_MAPPING: ClassVar[dict[int, tuple[type[Exception], str]]]
+    REQUEST_ERROR_MAPPING: ClassVar[dict[int, tuple[type[Exception], str]]]
+
     def __init__(self, timeout: int = 10, retries: int = 3) -> None: ...
     def _create_session(self, retries: int) -> requests.Session: ...
     def _handle_response_code(self, data: dict[str, Any]) -> None: ...
