@@ -219,6 +219,34 @@ class TestTokenManagement:
         with pytest.raises(TokenError, match="Cannot reset: No active session token"):
             trivia_client.reset_session_token()
 
+    def test_reset_token_network_error(self, trivia_client):
+        """Test token reset with network error"""
+        trivia_client._session_token = "existing_token"
+
+        with patch("requests.Session.get") as mock_get:
+            mock_get.side_effect = requests.exceptions.ConnectionError("Network error")
+
+            with pytest.raises(TriviaAPIError, match="Request failed: Connection error"):
+                trivia_client.reset_session_token()
+
+    def test_reset_token_invalid_response(self, trivia_client, mock_response):
+        """Test token reset with invalid API response"""
+        trivia_client._session_token = "existing_token"
+        mock_response.json.return_value = {"response_code": 3}
+
+        with patch("requests.Session.get", return_value=mock_response):
+            with pytest.raises(TokenError, match="Session token not found"):
+                trivia_client.reset_session_token()
+
+    def test_reset_token_empty_token_response(self, trivia_client, mock_response):
+        """Test token reset with missing token in response"""
+        trivia_client._session_token = "existing_token"
+        mock_response.json.return_value = {"response_code": 0, "token": ""}
+
+        with patch("requests.Session.get", return_value=mock_response):
+            with pytest.raises(TokenError, match="Invalid token received"):
+                trivia_client.reset_session_token()
+
 
 class TestCategories:
     def test_fetch_categories_success(self, trivia_client, mock_categories_response):

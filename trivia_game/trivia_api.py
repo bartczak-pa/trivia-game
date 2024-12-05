@@ -130,20 +130,7 @@ class TriviaAPIClient:
             raise TriviaAPIError(error_message)
 
     def _make_request(self, url: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
-        """Make a request to the Trivia API and handle errors
-
-        Args:
-            url (str): The URL to make the request to
-            params (dict[str, Any], optional): The query parameters. Defaults to None.
-
-        Raises:
-            TriviaAPIError: If an unknown error occurs
-            InvalidParameterError: If invalid parameters are provided
-            RateLimitError: If the rate limit is exceeded
-
-        Returns:
-            dict[str, Any]: The JSON response data
-        """
+        """Make HTTP request with error handling"""
         http_error_mapping: dict[int, tuple[type[Exception], str]] = {
             400: (InvalidParameterError, "Bad Request"),
             401: (TriviaAPIError, "Authentication required"),
@@ -163,11 +150,15 @@ class TriviaAPIClient:
             try:
                 data: dict[str, Any] = response.json()
             except requests.exceptions.JSONDecodeError as e:
-                json_error_msg: str = f"Invalid JSON response: {e!s}"
-                raise TriviaAPIError(json_error_msg) from e
+                error_msg: str = f"Invalid JSON response: {e!s}"
+                raise TriviaAPIError(error_msg) from e
 
             if "response_code" in data:
                 self._handle_response_code(data)
+
+            if "token" in data and not data["token"]:
+                msg: str = "Invalid token received"
+                raise TokenError(msg)
 
         except requests.exceptions.HTTPError as e:
             status_code: int = e.response.status_code
@@ -176,16 +167,16 @@ class TriviaAPIClient:
             raise error_class(msg) from e
 
         except requests.exceptions.ConnectionError as e:
-            connection_err_msg: str = "Request failed: Connection error"
-            raise TriviaAPIError(connection_err_msg) from e
+            msg: str = "Request failed: Connection error"
+            raise TriviaAPIError(msg) from e
 
         except requests.exceptions.Timeout as e:
-            timeout_err_msg: str = "Request failed: Request timed out"
-            raise TriviaAPIError(timeout_err_msg) from e
+            msg: str = "Request failed: Request timed out"
+            raise TriviaAPIError(msg) from e
 
         except requests.exceptions.RequestException as e:
-            request_exc_err_msg: str = f"Request failed: {e!s}"
-            raise TriviaAPIError(request_exc_err_msg) from e
+            msg: str = f"Request failed: {e!s}"
+            raise TriviaAPIError(msg) from e
 
         else:
             return data
