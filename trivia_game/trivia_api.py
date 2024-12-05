@@ -289,6 +289,8 @@ class TriviaAPIClient:
         category: str | None = None,
         difficulty: DifficultyType | None = None,
         question_type: QuestionType | None = None,
+        _retry_count: int = 0,
+        max_retries: int = 3,
     ) -> list[Question]:
         """Fetch trivia questions from the API.
 
@@ -297,11 +299,13 @@ class TriviaAPIClient:
             category (str, optional): The category to fetch questions from. Defaults to None.
             difficulty (str, optional): The difficulty level of the questions. Defaults to None.
             question_type (str, optional): The type of questions to fetch. Defaults to None.
-
+            _retry_count (int, optional): The current retry count for token reset. Defaults to 0.
+            max_retries (int, optional): The maximum number of retries for token reset. Defaults to 3.
         Raises:
-            TokenError: If the session token has been exhausted
-            TriviaAPIError: If the request fails
             InvalidParameterError: If invalid parameters are provided
+            TokenError: If the session token is not found or is empty
+            NoResultsError: If there are not enough questions available
+            RateLimitError: If the rate limit is exceeded
 
         Returns:
             list[Question]: The list of formatted question objects
@@ -327,11 +331,23 @@ class TriviaAPIClient:
             data: dict[str, Any] = self._make_request(self.QUESTIONS_API_URL, params=params)
 
         except TokenError as e:
-            if "Token has returned all possible questions" in str(e):
-                self._session_token = self.reset_session_token()
-                return self.fetch_questions(
-                    amount=amount, category=category, difficulty=difficulty, question_type=question_type
-                )
-            raise
+            if "Token has returned all possible questions" not in str(e):
+                raise
+
+            if _retry_count >= max_retries:
+                retry_count_err_msg: str = "Maximum retry attempts reached for token reset"
+                raise TokenError(retry_count_err_msg) from e
+
+            self._session_token = self.reset_session_token()
+
+            return self.fetch_questions(
+                amount=amount,
+                category=category,
+                difficulty=difficulty,
+                question_type=question_type,
+                _retry_count=_retry_count + 1,
+                max_retries=max_retries,
+            )
+
         else:
             return [self._format_question(question) for question in data["results"]]

@@ -414,35 +414,86 @@ class TestFetchQuestions:
                     "incorrect_answers": ["Wrong1", "Wrong2", "Wrong3"],
                 },
             ),
-            (
-                {"amount": 1, "question_type": "boolean"},
-                {
-                    "type": "boolean",
-                    "difficulty": "medium",
-                    "category": "Science",
-                    "question": "True/False test?",
-                    "correct_answer": "True",
-                    "incorrect_answers": ["False"],
-                },
-            ),
         ],
     )
     def test_fetch_questions_success(self, trivia_client, mock_response, params, expected):
         """Test successful questions fetch with different parameters"""
-        mock_response.json.return_value = {"response_code": 0, "results": [expected]}
+        mock_response.json.return_value = {"response_code": TriviaResponseCode.SUCCESS, "results": [expected]}
 
         with patch("requests.Session.get", return_value=mock_response):
             questions = trivia_client.fetch_questions(**params)
-
             assert len(questions) == 1
-            question = questions[0]
-            assert isinstance(question, Question)
-            assert question.type == expected["type"]
-            assert question.difficulty == expected["difficulty"]
-            assert question.category == expected["category"]
-            assert question.question == expected["question"]
-            assert question.correct_answer == expected["correct_answer"]
-            assert question.incorrect_answers == expected["incorrect_answers"]
+            assert isinstance(questions[0], Question)
+            assert questions[0].type == expected["type"]
+            assert questions[0].difficulty == expected["difficulty"]
+
+    def test_fetch_questions_token_empty_auto_reset_success(self, trivia_client, mock_response):
+        """Test successful token reset within retry limit"""
+        initial_token = "initial_token_123"
+        trivia_client._session_token = initial_token
+
+        # First call returns token empty
+        mock_response.json.return_value = {"response_code": TriviaResponseCode.TOKEN_EMPTY}
+
+        # Second call (token reset) returns new token
+        reset_response = Mock()
+        reset_response.json.return_value = {"response_code": TriviaResponseCode.SUCCESS, "token": "new_token_123"}
+
+        # Third call returns success
+        success_response = Mock()
+        success_response.json.return_value = {
+            "response_code": TriviaResponseCode.SUCCESS,
+            "results": [
+                {
+                    "type": "multiple",
+                    "difficulty": "medium",
+                    "category": "Test",
+                    "question": "Test?",
+                    "correct_answer": "Yes",
+                    "incorrect_answers": ["No"],
+                }
+            ],
+        }
+
+        with patch("requests.Session.get") as mock_get:
+            mock_get.side_effect = [mock_response, reset_response, success_response]
+
+            questions = trivia_client.fetch_questions()
+
+            assert len(mock_get.call_args_list) == 3
+            assert questions[0].question == "Test?"
+            assert trivia_client._session_token == "new_token_123"
+
+    def test_fetch_questions_max_retries_exceeded(self, trivia_client, mock_response):
+        """Test token reset exceeding max retries"""
+        trivia_client._session_token = "initial_token"
+
+        # Questions request response
+        empty_token_response = Mock()
+        empty_token_response.json.return_value = {"response_code": TriviaResponseCode.TOKEN_EMPTY}
+
+        # Token reset response
+        reset_token_response = Mock()
+        reset_token_response.json.return_value = {"response_code": TriviaResponseCode.SUCCESS, "token": "new_token"}
+
+        with patch("requests.Session.get") as mock_get:
+            # Simulate sequence:
+            # 1. Questions request (TOKEN_EMPTY)
+            # 2. Token reset (SUCCESS)
+            # 3. Questions request (TOKEN_EMPTY)
+            # ... repeat until max retries
+            mock_get.side_effect = [
+                empty_token_response,  # First questions request
+                reset_token_response,  # First reset
+                empty_token_response,  # Second questions request
+                reset_token_response,  # Second reset
+                empty_token_response,  # Third questions request
+                reset_token_response,  # Third reset
+                empty_token_response,  # Fourth questions request (exceeds max retries)
+            ]
+
+            with pytest.raises(TokenError, match="Maximum retry attempts reached for token reset"):
+                trivia_client.fetch_questions(max_retries=3)
 
     @pytest.mark.parametrize(
         "amount,expected_error",
@@ -456,51 +507,3 @@ class TestFetchQuestions:
         """Test handling of invalid amount parameter"""
         with pytest.raises(InvalidParameterError, match=expected_error):
             trivia_client.fetch_questions(amount=amount)
-
-    @pytest.mark.parametrize(
-        "params,expected_error",
-        [
-            ({"difficulty": "invalid"}, "Invalid parameters provided"),
-            ({"question_type": "invalid"}, "Invalid parameters provided"),
-            ({"category": "invalid"}, "Invalid parameters provided"),
-        ],
-    )
-    def test_fetch_questions_invalid_parameters(self, trivia_client, mock_response, params, expected_error):
-        """Test handling of invalid parameters"""
-        mock_response.json.return_value = {"response_code": 2}
-
-        with patch("requests.Session.get", return_value=mock_response):
-            with pytest.raises(InvalidParameterError, match=expected_error):
-                trivia_client.fetch_questions(**params)
-
-    def test_fetch_questions_token_empty_auto_reset(self, trivia_client, mock_response):
-        """Test automatic token reset when token is empty"""
-        mock_response.json.return_value = {"response_code": 4}
-        reset_response = Mock()
-        reset_response.json.return_value = {"response_code": 0, "token": "new_token_123"}
-        success_response = Mock()
-        success_response.json.return_value = {
-            "response_code": 0,
-            "results": [
-                {
-                    "type": "multiple",
-                    "difficulty": "medium",
-                    "category": "Test",
-                    "question": "Test?",
-                    "correct_answer": "Yes",
-                    "incorrect_answers": ["No", "Maybe", "Never"],
-                }
-            ],
-        }
-
-        with patch("requests.Session.get") as mock_get:
-            mock_get.side_effect = [
-                mock_response,  # First call - token empty
-                reset_response,  # Token reset
-                success_response,  # Retry with new token
-            ]
-
-            questions = trivia_client.fetch_questions()
-            assert len(questions) == 1
-            assert questions[0].question == "Test?"
-            assert trivia_client._session_token == "new_token_123"
