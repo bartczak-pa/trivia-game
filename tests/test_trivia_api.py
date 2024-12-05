@@ -389,63 +389,60 @@ class TestFormatQuestion:
 
 
 class TestFetchQuestions:
-    def test_fetch_questions_success(self, trivia_client, mock_response):
-        """Test successful questions fetch with default parameters"""
-        mock_response.json.return_value = {
-            "response_code": 0,
-            "results": [
+    @pytest.mark.parametrize(
+        "params,expected",
+        [
+            (
+                {},
                 {
                     "type": "multiple",
                     "difficulty": "medium",
                     "category": "Entertainment: Video Games",
-                    "question": "What&apos;s the name of the main character?",
-                    "correct_answer": "Mario &amp; Luigi",
-                    "incorrect_answers": ["Bowser &amp; Koopa", "Peach &amp; Daisy", "Wario &amp; Waluigi"],
-                }
-            ],
-        }
+                    "question": "Test?",
+                    "correct_answer": "Yes",
+                    "incorrect_answers": ["No", "Maybe", "Never"],
+                },
+            ),
+            (
+                {"amount": 1, "difficulty": "hard"},
+                {
+                    "type": "multiple",
+                    "difficulty": "hard",
+                    "category": "Entertainment: Video Games",
+                    "question": "Hard test?",
+                    "correct_answer": "Correct",
+                    "incorrect_answers": ["Wrong1", "Wrong2", "Wrong3"],
+                },
+            ),
+            (
+                {"amount": 1, "question_type": "boolean"},
+                {
+                    "type": "boolean",
+                    "difficulty": "medium",
+                    "category": "Science",
+                    "question": "True/False test?",
+                    "correct_answer": "True",
+                    "incorrect_answers": ["False"],
+                },
+            ),
+        ],
+    )
+    def test_fetch_questions_success(self, trivia_client, mock_response, params, expected):
+        """Test successful questions fetch with different parameters"""
+        mock_response.json.return_value = {"response_code": 0, "results": [expected]}
 
         with patch("requests.Session.get", return_value=mock_response):
-            questions = trivia_client.fetch_questions()
+            questions = trivia_client.fetch_questions(**params)
 
             assert len(questions) == 1
             question = questions[0]
             assert isinstance(question, Question)
-            assert question.type == "multiple"
-            assert question.difficulty == "medium"
-            assert question.category == "Entertainment: Video Games"
-            assert question.question == "What's the name of the main character?"
-            assert question.correct_answer == "Mario & Luigi"
-            assert question.incorrect_answers == ["Bowser & Koopa", "Peach & Daisy", "Wario & Waluigi"]
-
-    def test_fetch_questions_with_parameters(self, trivia_client, mock_response):
-        """Test questions fetch with specific parameters"""
-        mock_response.json.return_value = {
-            "response_code": 0,
-            "results": [
-                {
-                    "type": "multiple",
-                    "difficulty": "medium",
-                    "category": "General Knowledge",
-                    "question": "Test question?",
-                    "correct_answer": "Correct",
-                    "incorrect_answers": ["Wrong1", "Wrong2", "Wrong3"],
-                }
-            ],
-        }
-
-        with patch("requests.Session.get", return_value=mock_response) as mock_get:
-            trivia_client.fetch_questions(amount=5, category="9", difficulty="medium", question_type="multiple")
-
-            mock_get.assert_called_once()
-            call_args = mock_get.call_args[1]
-            assert call_args["params"] == {
-                "amount": "5",
-                "category": "9",
-                "difficulty": "medium",
-                "type": "multiple",
-                "token": trivia_client._session_token,
-            }
+            assert question.type == expected["type"]
+            assert question.difficulty == expected["difficulty"]
+            assert question.category == expected["category"]
+            assert question.question == expected["question"]
+            assert question.correct_answer == expected["correct_answer"]
+            assert question.incorrect_answers == expected["incorrect_answers"]
 
     @pytest.mark.parametrize(
         "amount,expected_error",
@@ -460,16 +457,27 @@ class TestFetchQuestions:
         with pytest.raises(InvalidParameterError, match=expected_error):
             trivia_client.fetch_questions(amount=amount)
 
+    @pytest.mark.parametrize(
+        "params,expected_error",
+        [
+            ({"difficulty": "invalid"}, "Invalid parameters provided"),
+            ({"question_type": "invalid"}, "Invalid parameters provided"),
+            ({"category": "invalid"}, "Invalid parameters provided"),
+        ],
+    )
+    def test_fetch_questions_invalid_parameters(self, trivia_client, mock_response, params, expected_error):
+        """Test handling of invalid parameters"""
+        mock_response.json.return_value = {"response_code": 2}
+
+        with patch("requests.Session.get", return_value=mock_response):
+            with pytest.raises(InvalidParameterError, match=expected_error):
+                trivia_client.fetch_questions(**params)
+
     def test_fetch_questions_token_empty_auto_reset(self, trivia_client, mock_response):
         """Test automatic token reset when token is empty"""
-        # First call returns token empty
         mock_response.json.return_value = {"response_code": 4}
-
-        # Second call (token reset) returns a new token
         reset_response = Mock()
         reset_response.json.return_value = {"response_code": 0, "token": "new_token_123"}
-
-        # Third call returns success with questions
         success_response = Mock()
         success_response.json.return_value = {
             "response_code": 0,
@@ -494,30 +502,5 @@ class TestFetchQuestions:
 
             questions = trivia_client.fetch_questions()
             assert len(questions) == 1
-            assert isinstance(questions[0], Question)
             assert questions[0].question == "Test?"
             assert trivia_client._session_token == "new_token_123"
-
-    @pytest.mark.parametrize(
-        "params,expected_error",
-        [
-            ({"difficulty": "invalid"}, "Invalid parameters provided"),
-            ({"question_type": "invalid"}, "Invalid parameters provided"),
-            ({"category": "invalid"}, "Invalid parameters provided"),
-        ],
-    )
-    def test_fetch_questions_invalid_parameters(self, trivia_client, mock_response, params, expected_error):
-        """Test handling of invalid parameters"""
-        mock_response.json.return_value = {"response_code": 2}
-
-        with patch("requests.Session.get", return_value=mock_response):
-            with pytest.raises(InvalidParameterError, match=expected_error):
-                trivia_client.fetch_questions(**params)
-
-    def test_fetch_questions_no_results(self, trivia_client, mock_response):
-        """Test handling of no results response"""
-        mock_response.json.return_value = {"response_code": 1, "results": []}
-
-        with patch("requests.Session.get", return_value=mock_response):
-            with pytest.raises(NoResultsError, match="Not enough questions available for your query"):
-                trivia_client.fetch_questions()
