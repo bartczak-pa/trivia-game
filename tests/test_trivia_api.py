@@ -249,14 +249,22 @@ class TestTokenManagement:
 
 
 class TestCategories:
-    def test_fetch_categories_success(self, trivia_client, mock_categories_response):
+    def test_fetch_categories_success(self, trivia_client, mock_categories_response, mock_response):
         """Test successful categories fetch"""
-        with patch("requests.Session.get", return_value=mock_categories_response):
-            categories = self._extracted_from_test_fetch_categories_invalid_data_4(
-                trivia_client, 3, "General Knowledge", "9"
-            )
-            assert categories["Entertainment: Books"] == "10"
-            assert categories["Entertainment: Film"] == "11"
+        mock_response.json.return_value = {
+            "trivia_categories": [
+                {"id": "9", "name": "General Knowledge"},
+                {"id": "10", "name": "Books"},
+                {"id": "11", "name": "Film"},
+            ]
+        }
+
+        with patch("requests.Session.get", return_value=mock_response):
+            categories = trivia_client.fetch_categories()
+            assert len(categories) == 3
+            assert categories["General Knowledge"] == "9"
+            assert categories["Books"] == "10"
+            assert categories["Film"] == "11"
 
     def test_fetch_categories_empty_response(self, trivia_client, mock_response):
         """Test handling of empty categories response"""
@@ -507,3 +515,29 @@ class TestFetchQuestions:
         """Test handling of invalid amount parameter"""
         with pytest.raises(InvalidParameterError, match=expected_error):
             trivia_client.fetch_questions(amount=amount)
+
+
+class TestValidateToken:
+    def test_validate_token_success(self, trivia_client):
+        """Test successful token validation"""
+        data = {"token": "valid_token_123"}
+        trivia_client._validate_token(data)  # Should not raise any exception
+
+    def test_validate_token_empty(self, trivia_client):
+        """Test validation with empty token"""
+        data = {"token": ""}
+
+        with pytest.raises(TokenError, match="Invalid token received"):
+            trivia_client._validate_token(data)
+
+    def test_validate_token_missing(self, trivia_client):
+        """Test validation with missing token field"""
+        data = {"some_field": "value"}
+        trivia_client._validate_token(data)  # Should not raise any exception
+
+    def test_validate_token_none(self, trivia_client):
+        """Test validation with None token value"""
+        data = {"token": None}
+
+        with pytest.raises(TokenError, match="Invalid token received"):
+            trivia_client._validate_token(data)

@@ -217,6 +217,22 @@ class TriviaAPIClient:
         data: dict[str, Any] = self._make_request(self.SESSION_TOKEN_API_URL, params=params)
         return cast(str, data["token"])
 
+    def _validate_token(self, data: dict[str, Any]) -> None:
+        """Validate the session token in the API response
+
+        Args:
+            data (dict[str, Any]): The API response data
+
+        Raises:
+            TokenError: If the token is invalid or empty
+
+        Returns:
+            None
+        """
+        if "token" in data and not data["token"]:
+            msg: str = "Invalid token received"
+            raise TokenError(msg)
+
     @staticmethod
     def _decode_text(text: str) -> str:
         """Decode URL-encoded text
