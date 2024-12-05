@@ -303,6 +303,35 @@ tomli = {version = "*", optional = true, markers = "python_full_version <= \"3.1
 toml = ["tomli"]
 
 [[package]]
+name = "customtkinter"
+version = "5.2.2"
+description = "Create modern looking GUIs with Python"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "customtkinter-5.2.2-py3-none-any.whl", hash = "sha256:14ad3e7cd3cb3b9eb642b9d4e8711ae80d3f79fb82545ad11258eeffb2e6b37c"},
+    {file = "customtkinter-5.2.2.tar.gz", hash = "sha256:fd8db3bafa961c982ee6030dba80b4c2e25858630756b513986db19113d8d207"},
+]
+
+[package.dependencies]
+darkdetect = "*"
+packaging = "*"
+
+[[package]]
+name = "darkdetect"
+version = "0.8.0"
+description = "Detect OS Dark Mode from Python"
+optional = false
+python-versions = ">=3.6"
+files = [
+    {file = "darkdetect-0.8.0-py3-none-any.whl", hash = "sha256:a7509ccf517eaad92b31c214f593dbcf138ea8a43b2935406bbd565e15527a85"},
+    {file = "darkdetect-0.8.0.tar.gz", hash = "sha256:b5428e1170263eb5dea44c25dc3895edd75e6f52300986353cd63533fe7df8b1"},
+]
+
+[package.extras]
+macos-listener = ["pyobjc-framework-Cocoa"]
+
+[[package]]
 name = "deptry"
 version = "0.16.2"
 description = "A command line utility to check for unused, missing and transitive dependencies in a Python project."
@@ -1427,4 +1456,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8,<4.0"
-content-hash = "9eca9535e1089f38994375f4e10ca474eb6ce335037272eb5a5137fc321e8032"
+content-hash = "f62eb22e824543730184804fa178692366f2b13c1769de0d7ef8ee8bbdb18f03"
