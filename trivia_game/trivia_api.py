@@ -143,6 +143,13 @@ class TriviaAPIClient:
             504: (TriviaAPIError, "Gateway Timeout"),
         }
 
+        request_error_mapping: dict[type[Exception], tuple[type[Exception], str]] = {
+            requests.exceptions.ConnectionError: (TriviaAPIError, "Connection error"),
+            requests.exceptions.Timeout: (TriviaAPIError, "Request timed out"),
+            requests.exceptions.JSONDecodeError: (TriviaAPIError, "Invalid JSON response"),
+            requests.exceptions.RequestException: (TriviaAPIError, "Generic error"),
+        }
+
         try:
             response: requests.Response = self.session.get(url, params=params, timeout=self.timeout)
             response.raise_for_status()
@@ -157,26 +164,19 @@ class TriviaAPIClient:
                 self._handle_response_code(data)
 
             if "token" in data and not data["token"]:
-                msg: str = "Invalid token received"
-                raise TokenError(msg)
+                token_err_msg: str = "Invalid token received"
+                raise TokenError(token_err_msg)
 
         except requests.exceptions.HTTPError as e:
             status_code: int = e.response.status_code
             error_class, error_msg = http_error_mapping.get(status_code, (TriviaAPIError, f"HTTP {status_code}"))
-            msg: str = f"Request failed: {error_msg}"
-            raise error_class(msg) from e
+            http_err_msg: str = f"Request failed: {error_msg}"
+            raise error_class(http_err_msg) from e
 
-        except requests.exceptions.ConnectionError as e:
-            msg: str = "Request failed: Connection error"
-            raise TriviaAPIError(msg) from e
-
-        except requests.exceptions.Timeout as e:
-            msg: str = "Request failed: Request timed out"
-            raise TriviaAPIError(msg) from e
-
-        except requests.exceptions.RequestException as e:
-            msg: str = f"Request failed: {e!s}"
-            raise TriviaAPIError(msg) from e
+        except tuple(request_error_mapping.keys()) as e:
+            error_class, error_msg = request_error_mapping[type(e)]
+            request_err_msg: str = f"Request failed: {error_msg}"
+            raise error_class(request_err_msg) from e
 
         else:
             return data
