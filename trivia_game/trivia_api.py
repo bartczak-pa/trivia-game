@@ -171,10 +171,12 @@ class TriviaAPIClient:
         if "response_code" in data:
             self._handle_response_code(data)
 
-        if "token" not in data or data["token"]:
-            return data
-        token_err_msg: str = "Invalid token received"
-        raise TokenError(token_err_msg)
+        # Check for empty token only if token field exists
+        if "token" in data and not data["token"]:
+            token_err_msg: str = "Invalid token received"
+            raise TokenError(token_err_msg)
+
+        return data
 
     def _make_request(self, url: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
         """Make HTTP request with error handling"""
