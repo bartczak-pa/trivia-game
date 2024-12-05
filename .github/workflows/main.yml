@@ -49,9 +49,12 @@ jobs:
       - name: Check typing
         run: poetry run mypy
 
-      - name: Upload coverage reports to Codecov with GitHub Action on Python 3.12
-        uses: codecov/codecov-action@v4
-        if: ${{ matrix.python-version == '3.12' }}
+      - name: Upload coverage reports to Codecov with GitHub Action on Python 3.13
+        uses: codecov/codecov-action@v5
+        if: ${{ matrix.python-version == '3.13' }}
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          slug: bartczak-pa/trivia-game
 
   check-docs:
     runs-on: ubuntu-latest
