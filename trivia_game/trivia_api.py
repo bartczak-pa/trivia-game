@@ -1,6 +1,7 @@
 """Module for interacting with the trivia API."""
 
 import html
+import types
 from typing import Any, ClassVar, cast
 from urllib.parse import unquote
 
@@ -367,3 +368,26 @@ class TriviaAPIClient:
 
         else:
             return [self._format_question(question) for question in data["results"]]
+
+    def __enter__(self) -> "TriviaAPIClient":
+        """Enter context manager
+
+        Returns:
+            TriviaAPIClient: The client instance
+        """
+        return self
+
+    def __exit__(
+        self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: types.TracebackType | None
+    ) -> None:
+        """Close the session when exiting the context manager.
+
+        Args:
+            exc_type: The type of the exception that was raised
+            exc_val: The instance of the exception that was raised
+            exc_tb: The traceback of the exception that was raised
+
+        Returns:
+            None
+        """
+        self.session.close()
