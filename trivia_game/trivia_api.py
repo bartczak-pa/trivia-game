@@ -149,25 +149,39 @@ class TriviaAPIClient:
         else:
             raise TriviaAPIError(error_message)
 
+    def _parse_and_validate_response(self, response: requests.Response) -> dict[str, Any]:
+        """Parse and validate JSON response from API
+
+        Args:
+            response (requests.Response): The HTTP response object
+
+        Raises:
+            TriviaAPIError: If the JSON response is invalid
+
+        Returns:
+            dict[str, Any]: The JSON response data
+        """
+        try:
+            data: dict[str, Any] = response.json()
+
+        except requests.exceptions.JSONDecodeError as e:
+            error_msg: str = f"Invalid JSON response: {e!s}"
+            raise TriviaAPIError(error_msg) from e
+
+        if "response_code" in data:
+            self._handle_response_code(data)
+
+        if "token" not in data or data["token"]:
+            return data
+        token_err_msg: str = "Invalid token received"
+        raise TokenError(token_err_msg)
+
     def _make_request(self, url: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
         """Make HTTP request with error handling"""
 
         try:
             response: requests.Response = self.session.get(url, params=params, timeout=self.timeout)
             response.raise_for_status()
-
-            try:
-                data: dict[str, Any] = response.json()
-            except requests.exceptions.JSONDecodeError as e:
-                error_msg: str = f"Invalid JSON response: {e!s}"
-                raise TriviaAPIError(error_msg) from e
-
-            if "response_code" in data:
-                self._handle_response_code(data)
-
-            if "token" in data and not data["token"]:
-                token_err_msg: str = "Invalid token received"
-                raise TokenError(token_err_msg)
 
         except requests.exceptions.HTTPError as e:
             status_code: int = e.response.status_code
@@ -181,7 +195,7 @@ class TriviaAPIClient:
             raise error_class(request_err_msg) from e
 
         else:
-            return data
+            return self._parse_and_validate_response(response)
 
     def request_session_token(self) -> str:
         """Request a session token from the API

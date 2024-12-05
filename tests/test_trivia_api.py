@@ -78,14 +78,6 @@ class TestMakeRequest:
             result = trivia_client._make_request("http://test.url")
             assert result == expected_data
 
-    def test_successful_request_with_response_code(self, trivia_client, mock_response):
-        """Test successful request with response code"""
-        mock_response.json.return_value = {"response_code": TriviaResponseCode.SUCCESS, "results": ["data"]}
-
-        with patch("requests.Session.get", return_value=mock_response):
-            result = trivia_client._make_request("http://test.url")
-            assert result["results"] == ["data"]
-
     def test_request_with_params(self, trivia_client, mock_response):
         """Test request with query parameters"""
         mock_response.json.return_value = {"data": "test"}
@@ -148,6 +140,57 @@ class TestMakeRequest:
 
             with pytest.raises(TriviaAPIError, match=expected_error):
                 trivia_client._make_request("http://test.url")
+
+
+class TestParseAndValidateResponse:
+    """Test cases for parsing and validating API responses"""
+
+    def test_successful_response(self, trivia_client):
+        """Test successful response parsing"""
+        mock_response = Mock()
+        mock_response.json.return_value = {
+            "response_code": TriviaResponseCode.SUCCESS,
+            "token": "valid_token",
+            "data": "test",
+        }
+
+        result = trivia_client._parse_and_validate_response(mock_response)
+        assert result["data"] == "test"
+        assert result["token"] == "valid_token"
+
+    def test_invalid_json(self, trivia_client):
+        """Test handling of invalid JSON response"""
+        mock_response = Mock()
+        mock_response.json.side_effect = requests.exceptions.JSONDecodeError("Invalid JSON", "", 0)
+
+        with pytest.raises(TriviaAPIError, match=r"Invalid JSON response: Invalid JSON: line 1 column 1 \(char 0\)"):
+            trivia_client._parse_and_validate_response(mock_response)
+
+    def test_invalid_token(self, trivia_client):
+        """Test handling of invalid token in response"""
+        mock_response = Mock()
+        mock_response.json.return_value = {"response_code": TriviaResponseCode.SUCCESS, "token": ""}
+
+        with pytest.raises(TokenError, match="Invalid token received"):
+            trivia_client._parse_and_validate_response(mock_response)
+
+    @pytest.mark.parametrize(
+        "response_code,expected_exception,expected_message",
+        [
+            (TriviaResponseCode.NO_RESULTS, NoResultsError, "Not enough questions available for your query"),
+            (TriviaResponseCode.INVALID_PARAMETER, InvalidParameterError, "Invalid parameters provided"),
+            (TriviaResponseCode.TOKEN_NOT_FOUND, TokenError, "Session token not found"),
+            (TriviaResponseCode.TOKEN_EMPTY, TokenError, "Token has returned all possible questions"),
+            (TriviaResponseCode.RATE_LIMIT, RateLimitError, "Rate limit exceeded. Please wait 5 seconds"),
+        ],
+    )
+    def test_api_error_responses(self, trivia_client, response_code, expected_exception, expected_message):
+        """Test handling of API error responses"""
+        mock_response = Mock()
+        mock_response.json.return_value = {"response_code": response_code}
+
+        with pytest.raises(expected_exception, match=expected_message):
+            trivia_client._parse_and_validate_response(mock_response)
 
 
 class TestTokenManagement:
