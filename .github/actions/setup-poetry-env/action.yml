@@ -26,7 +26,7 @@ runs:
       shell: bash
 
     - name: Configure Poetry virtual environment in project
-      run: poetry config virtualenvs.in-project true
+      run: poetry config virtualenvs.path --unset && poetry config virtualenvs.in-project true
       shell: bash
 
     - name: Load cached venv
