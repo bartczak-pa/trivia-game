@@ -80,11 +80,33 @@ class TestMakeRequest:
 
     def test_successful_request_with_response_code(self, trivia_client, mock_response):
         """Test successful request with response code"""
-        mock_response.json.return_value = {"response_code": 0, "results": ["data"]}
+        mock_response.json.return_value = {"response_code": TriviaResponseCode.SUCCESS, "results": ["data"]}
 
         with patch("requests.Session.get", return_value=mock_response):
             result = trivia_client._make_request("http://test.url")
             assert result["results"] == ["data"]
+
+    def test_request_with_params(self, trivia_client, mock_response):
+        """Test request with query parameters"""
+        mock_response.json.return_value = {"data": "test"}
+        test_params = {"param1": "value1", "param2": "value2"}
+
+        with patch("requests.Session.get", return_value=mock_response) as mock_get:
+            trivia_client._make_request("http://test.url", params=test_params)
+
+            mock_get.assert_called_once_with("http://test.url", params=test_params, timeout=trivia_client.timeout)
+
+    def test_invalid_json_response(self, trivia_client):
+        """Test handling of invalid JSON response"""
+        with patch("requests.Session.get") as mock_get:
+            mock_response = Mock()
+            mock_response.json.side_effect = requests.exceptions.JSONDecodeError("Invalid JSON", "", 0)
+            mock_get.return_value = mock_response
+
+            with pytest.raises(
+                TriviaAPIError, match=r"Invalid JSON response: Invalid JSON: line 1 column 1 \(char 0\)"
+            ):
+                trivia_client._make_request("http://test.url")
 
     @pytest.mark.parametrize(
         "exception_class,expected_error",
@@ -114,10 +136,10 @@ class TestMakeRequest:
             (502, "Request failed: Bad Gateway"),
             (503, "Request failed: Service Unavailable"),
             (504, "Request failed: Gateway Timeout"),
-            (418, "Request failed: HTTP 418"),  # Testing unknown status code
+            (418, "Request failed: HTTP 418"),
         ],
     )
-    def test_http_error_codes(self, trivia_client, mock_response, status_code, expected_error):
+    def test_http_error_codes(self, trivia_client, status_code, expected_error):
         """Test handling of HTTP error status codes"""
         with patch("requests.Session.get") as mock_get:
             mock_response = Mock()
@@ -125,28 +147,6 @@ class TestMakeRequest:
             mock_get.side_effect = requests.exceptions.HTTPError(response=mock_response)
 
             with pytest.raises(TriviaAPIError, match=expected_error):
-                trivia_client._make_request("http://test.url")
-
-    def test_request_with_params(self, trivia_client, mock_response):
-        """Test request with query parameters"""
-        mock_response.json.return_value = {"data": "test"}
-        test_params = {"param1": "value1", "param2": "value2"}
-
-        with patch("requests.Session.get", return_value=mock_response) as mock_get:
-            trivia_client._make_request("http://test.url", params=test_params)
-
-            mock_get.assert_called_once_with("http://test.url", params=test_params, timeout=trivia_client.timeout)
-
-    def test_invalid_json_response(self, trivia_client):
-        """Test handling of invalid JSON response"""
-        with patch("requests.Session.get") as mock_get:
-            mock_response = Mock()
-            mock_response.json.side_effect = requests.exceptions.JSONDecodeError("Invalid JSON", "", 0)
-            mock_get.return_value = mock_response
-
-            with pytest.raises(
-                TriviaAPIError, match=r"Invalid JSON response: Invalid JSON: line 1 column 1 \(char 0\)"
-            ):
                 trivia_client._make_request("http://test.url")
 
 

@@ -130,20 +130,31 @@ class TriviaAPIClient:
             raise TriviaAPIError(error_message)
 
     def _make_request(self, url: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
-        """Make HTTP request with error handling
+        """Make a request to the Trivia API and handle errors
 
         Args:
             url (str): The URL to make the request to
-            params (dict[str, Any], optional): Query parameters for the request. Defaults to None.
+            params (dict[str, Any], optional): The query parameters. Defaults to None.
 
         Raises:
-            TriviaAPIError: If the request fails
-            TriviaAPIError: If the response code is not SUCCESS
-            TriviaAPIError: If the response is not valid JSON
+            TriviaAPIError: If an unknown error occurs
+            InvalidParameterError: If invalid parameters are provided
+            RateLimitError: If the rate limit is exceeded
 
         Returns:
             dict[str, Any]: The JSON response data
         """
+        http_error_mapping: dict[int, tuple[type[Exception], str]] = {
+            400: (InvalidParameterError, "Bad Request"),
+            401: (TriviaAPIError, "Authentication required"),
+            403: (TriviaAPIError, "Access denied"),
+            404: (TriviaAPIError, "Resource not found"),
+            429: (RateLimitError, "Rate limit exceeded"),
+            500: (TriviaAPIError, "Internal Server Error"),
+            502: (TriviaAPIError, "Bad Gateway"),
+            503: (TriviaAPIError, "Service Unavailable"),
+            504: (TriviaAPIError, "Gateway Timeout"),
+        }
 
         try:
             response: requests.Response = self.session.get(url, params=params, timeout=self.timeout)
@@ -152,36 +163,29 @@ class TriviaAPIClient:
             try:
                 data: dict[str, Any] = response.json()
             except requests.exceptions.JSONDecodeError as e:
-                json_err_msg: str = f"Invalid JSON response: {e!s}"
-                raise TriviaAPIError(json_err_msg) from e
+                json_error_msg: str = f"Invalid JSON response: {e!s}"
+                raise TriviaAPIError(json_error_msg) from e
 
             if "response_code" in data:
                 self._handle_response_code(data)
 
         except requests.exceptions.HTTPError as e:
             status_code: int = e.response.status_code
-            error_msg: str = {
-                400: "Bad Request",
-                401: "Authentication required",
-                403: "Access denied",
-                404: "Resource not found",
-                429: "Rate limit exceeded",
-                500: "Internal Server Error",
-                502: "Bad Gateway",
-                503: "Service Unavailable",
-                504: "Gateway Timeout",
-            }.get(status_code, f"HTTP {status_code}")
+            error_class, error_msg = http_error_mapping.get(status_code, (TriviaAPIError, f"HTTP {status_code}"))
             msg: str = f"Request failed: {error_msg}"
-            raise TriviaAPIError(msg) from e
+            raise error_class(msg) from e
+
         except requests.exceptions.ConnectionError as e:
-            cnn_err_msg: str = "Request failed: Connection error"
-            raise TriviaAPIError(cnn_err_msg) from e
+            connection_err_msg: str = "Request failed: Connection error"
+            raise TriviaAPIError(connection_err_msg) from e
+
         except requests.exceptions.Timeout as e:
             timeout_err_msg: str = "Request failed: Request timed out"
             raise TriviaAPIError(timeout_err_msg) from e
+
         except requests.exceptions.RequestException as e:
-            exc_msg: str = f"Request failed: {e!s}"
-            raise TriviaAPIError(exc_msg) from e
+            request_exc_err_msg: str = f"Request failed: {e!s}"
+            raise TriviaAPIError(request_exc_err_msg) from e
 
         else:
             return data
