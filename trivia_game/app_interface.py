@@ -1,5 +1,7 @@
 import customtkinter as ctk  # type: ignore[import-untyped]
 
+from trivia_game.view.frame_registry import FrameRegistry
+
 
 class AppInterface(ctk.CTk):
     def __init__(self) -> None:
@@ -13,7 +15,13 @@ class AppInterface(ctk.CTk):
         self.container.pack(fill="both", expand=True)
 
         # Dictionary to store all frames
-        self.frames: dict = {}
+        self.frames: dict[type[ctk.CTkFrame], ctk.CTkFrame] = {}
+
+        # Use FrameRegistry to get all registered frames
+        for frame_class in FrameRegistry.get_all_frames():
+            frame = frame_class(self.container, self)  # type: ignore[unused-ignore]
+            self.frames[frame_class] = frame
+            frame.grid(row=0, column=0, sticky="nsew")
 
     def show_frame(self, frame_class: type[ctk.CTkFrame]) -> None:
         """Show a frame for the given class
