@@ -15,11 +15,11 @@ class AppInterface(ctk.CTk):
         # Dictionary to store all frames
         self.frames: dict = {}
 
-    def show_frame(self, frame_class: ctk.CTk) -> None:
+    def show_frame(self, frame_class: type[ctk.CTkFrame]) -> None:
         """Show a frame for the given class
 
         Args:
-            frame_class (ctk.CTk): The frame class to show
+            frame_class (type[ctk.CTkFrame]): The class of the frame to show
 
         Returns:
             None
