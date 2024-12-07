@@ -1,5 +1,6 @@
 import customtkinter as ctk  # type: ignore[import-untyped]
 
+from trivia_game.quiz_brain import QuizBrain
 from trivia_game.view.frames import FRAME_CLASSES, MainMenuFrame
 
 
@@ -10,6 +11,9 @@ class AppInterface(ctk.CTk):
 
         self.title("Trivia Game")
         self.geometry("800x600")
+
+        # Initialize the quiz brain
+        self.quiz_brain = QuizBrain(self)
 
         # Configure the main window grid
         self.grid_rowconfigure(0, weight=1)
