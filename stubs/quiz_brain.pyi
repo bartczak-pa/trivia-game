@@ -1,9 +1,9 @@
-from trivia_game.app_interface import AppInterface
+from trivia_game.base_types import AppControllerProtocol
 from trivia_game.trivia_api import TriviaAPIClient
 
 class QuizBrain:
-    interface: AppInterface
+    controller: AppControllerProtocol
     api_client: TriviaAPIClient
     categories: dict[str, str]
 
-    def __init__(self, interface: AppInterface) -> None: ...
+    def __init__(self, controller: AppControllerProtocol) -> None: ...

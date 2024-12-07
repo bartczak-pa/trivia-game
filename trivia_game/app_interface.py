@@ -1,10 +1,11 @@
 import customtkinter as ctk  # type: ignore[import-untyped]
 
+from trivia_game.base_types import AppControllerProtocol
 from trivia_game.quiz_brain import QuizBrain
 from trivia_game.view.frames import FRAME_CLASSES, MainMenuFrame
 
 
-class AppInterface(ctk.CTk):
+class AppInterface(ctk.CTk, AppControllerProtocol):
     def __init__(self) -> None:
         """Create the main application interface"""
         super().__init__()

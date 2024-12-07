@@ -2,9 +2,11 @@ from collections.abc import Callable
 
 import customtkinter as ctk  # type: ignore[import-untyped]
 
+from trivia_game.base_types import AppControllerProtocol
+
 
 class MainMenuFrame(ctk.CTkFrame):
-    def __init__(self, parent: ctk.CTkFrame, controller: "AppInterface") -> None:  # type: ignore[name-defined]
+    def __init__(self, parent: ctk.CTkFrame, controller: AppControllerProtocol) -> None:
         """Create the main menu frame
 
         Args:
@@ -34,7 +36,7 @@ class MainMenuFrame(ctk.CTkFrame):
 
 
 class StartGameFrame(ctk.CTkFrame):
-    def __init__(self, parent: ctk.CTkFrame, controller: "AppInterface") -> None:  # type: ignore[name-defined]
+    def __init__(self, parent: ctk.CTkFrame, controller: AppControllerProtocol) -> None:
         """Create the start game frame
 
         Args:
@@ -87,7 +89,7 @@ class StartGameFrame(ctk.CTkFrame):
 
 
 class ScoreboardFrame(ctk.CTkFrame):
-    def __init__(self, parent: ctk.CTkFrame, controller: "AppInterface") -> None:  # type: ignore[name-defined]
+    def __init__(self, parent: ctk.CTkFrame, controller: AppControllerProtocol) -> None:
         """Create the scoreboard frame
 
         Args:
@@ -103,7 +105,7 @@ class ScoreboardFrame(ctk.CTkFrame):
 
 
 class AppSettingsFrame(ctk.CTkFrame):
-    def __init__(self, parent: ctk.CTkFrame, controller: "AppInterface") -> None:  # type: ignore[name-defined]
+    def __init__(self, parent: ctk.CTkFrame, controller: AppControllerProtocol) -> None:
         """Create the settings frame
 
         Args:
