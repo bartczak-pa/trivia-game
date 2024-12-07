@@ -43,11 +43,47 @@ class StartGameFrame(ctk.CTkFrame):
 
         """
         super().__init__(parent)
-        # Add a label to test the frame
-        ctk.CTkLabel(self, text="Start Game Frame").pack(pady=20)
+
+        # Configure frame grid
+        self.grid_rowconfigure(0, weight=2)  # Top spacing
+        self.grid_rowconfigure((1, 2, 3, 4), weight=0)  # Content rows
+        self.grid_rowconfigure(5, weight=3)  # Bottom spacing
+        self.grid_columnconfigure((0, 2), weight=1)  # Left and right spacing
+        self.grid_columnconfigure(1, weight=0)  # Center column
+
+        # Game options
+        self.category_var = ctk.StringVar(value="Any Category")
+        self.difficulty_var = ctk.StringVar(value="Any Difficulty")
+        self.type_var = ctk.StringVar(value="Any Type")
+
+        # Option menus
+        categories = ["Any Category", "General Knowledge", "Science", "History"]  # TODO: Replace fetching categories
+        difficulties = ["Any Difficulty", "Easy", "Medium", "Hard"]
+        types = ["Any Type", "Multiple Choice", "True/False"]
+
+        # Category selection
+        ctk.CTkLabel(self, text="Category:").grid(row=2, column=1, pady=(20, 5), sticky="w")
+
+        ctk.CTkOptionMenu(self, variable=self.category_var, values=categories, width=200).grid(
+            row=2, column=1, pady=(20, 5)
+        )
+
+        # Difficulty selection
+        ctk.CTkLabel(self, text="Difficulty:").grid(row=3, column=1, pady=5, sticky="w")
+
+        ctk.CTkOptionMenu(self, variable=self.difficulty_var, values=difficulties, width=200).grid(
+            row=3, column=1, pady=5
+        )
+
+        # Question type selection
+        ctk.CTkLabel(self, text="Question Type:").grid(row=4, column=1, pady=5, sticky="w")
+
+        ctk.CTkOptionMenu(self, variable=self.type_var, values=types, width=200).grid(row=4, column=1, pady=5)
 
         # Back button
-        ctk.CTkButton(self, text="Back to Menu", command=lambda: controller.show_frame(MainMenuFrame)).pack(pady=10)
+        ctk.CTkButton(self, text="Back to Menu", command=lambda: controller.show_frame(MainMenuFrame), width=200).grid(
+            row=6, column=1, pady=(0, 30)
+        )  # More bottom padding
 
 
 class ScoreboardFrame(ctk.CTkFrame):
