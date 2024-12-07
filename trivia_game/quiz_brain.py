@@ -1,5 +1,5 @@
-from trivia_game import trivia_api
 from trivia_game.base_types import AppControllerProtocol, TriviaGameProtocol
+from trivia_game.trivia_api import TriviaAPIClient
 
 
 class QuizBrain(TriviaGameProtocol):
@@ -15,6 +15,6 @@ class QuizBrain(TriviaGameProtocol):
 
         """
         self.controller: AppControllerProtocol = controller
-        self.api_client: trivia_api.TriviaAPIClient = trivia_api.TriviaAPIClient()
+        self.api_client: TriviaAPIClient = TriviaAPIClient()
         self.categories: dict[str, str] = self.api_client.fetch_categories()
         print(self.categories)
