@@ -46,26 +46,26 @@ class TestQuizBrain:
             f"Error loading categories: {error_message}. Please try again later."
         )
 
-    def test_get_categories_with_any_success(self):
+    def test_get_available_categories_success(self):
         """Test successful retrieval of categories with 'Any Category' option"""
         # Arrange
         self.quiz_brain.categories = {"History": "1", "Animals": "2", "Geography": "3"}
 
         # Act
-        result = self.quiz_brain.get_categories_with_any()
+        result = self.quiz_brain.get_available_categories()
 
         # Assert
         assert result[0] == "Any Category"
         assert result[1:] == ["Animals", "Geography", "History"]
         assert len(result) == len(self.quiz_brain.categories) + 1
 
-    def test_get_categories_with_any_empty_categories(self):
+    def test_get_available_categories_empty_categories(self):
         """Test retrieval with empty categories dictionary"""
         # Arrange
         self.quiz_brain.categories = {}
 
         # Act
-        result = self.quiz_brain.get_categories_with_any()
+        result = self.quiz_brain.get_available_categories()
 
         # Assert
         assert result == ["Any Category"]
@@ -102,10 +102,10 @@ class TestQuizBrain:
         with pytest.raises(KeyError):
             self.quiz_brain.get_category_id("Invalid Category")
 
-    def test_get_difficulties(self):
+    def test_get_available_difficulties(self):
         """Test getting difficulty levels"""
         # Act
-        result = self.quiz_brain.get_difficulties()
+        result = self.quiz_brain.get_available_difficulties()
 
         # Assert
         expected = ["Any Difficulty", "Easy", "Medium", "Hard"]
@@ -113,10 +113,10 @@ class TestQuizBrain:
         assert len(result) == 4
         assert result[0] == "Any Difficulty"
 
-    def test_get_question_types(self):
+    def test_get_available_question_types(self):
         """Test getting question types"""
         # Act
-        result = self.quiz_brain.get_question_types()
+        result = self.quiz_brain.get_available_question_types()
 
         # Assert
         expected = ["Any Type", "Multiple Choice", "True / False"]

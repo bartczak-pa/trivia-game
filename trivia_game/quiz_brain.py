@@ -28,7 +28,7 @@ class QuizBrain(TriviaGameProtocol):
         except CategoryError as e:
             self.controller.show_error(f"Error loading categories: {e}. Please try again later.")
 
-    def get_categories_with_any(self) -> list[str]:
+    def get_available_categories(self) -> list[str]:
         """Get the categories with the 'Any Category' option
 
         Returns:
@@ -52,8 +52,8 @@ class QuizBrain(TriviaGameProtocol):
             return None
         return self.categories[category_name]
 
-    def get_difficulties(self) -> list[str]:
-        """Get the difficulties for the quiz
+    def get_available_difficulties(self) -> list[str]:
+        """ "Get list of available difficulty levels
 
         Returns:
             list[str]: The difficulties
@@ -61,7 +61,7 @@ class QuizBrain(TriviaGameProtocol):
         """
         return ["Any Difficulty", "Easy", "Medium", "Hard"]
 
-    def get_question_types(self) -> list[str]:
+    def get_available_question_types(self) -> list[str]:
         """Get the question types for the quiz
 
         Returns:
