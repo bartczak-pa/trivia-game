@@ -59,7 +59,7 @@ class StartGameFrame(ctk.CTkFrame):
         self.type_var = ctk.StringVar(value="Any Type")
 
         # Option menus
-        categories = ["Any Category", "General Knowledge", "Science", "History"]  # TODO: Replace fetching categories
+        categories = controller.quiz_brain.get_categories_with_any()
         difficulties = ["Any Difficulty", "Easy", "Medium", "Hard"]
         types = ["Any Type", "Multiple Choice", "True/False"]
 

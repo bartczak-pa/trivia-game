@@ -27,3 +27,13 @@ class QuizBrain(TriviaGameProtocol):
             self.categories = self.api_client.fetch_categories()
         except CategoryError as e:
             self.controller.show_error(f"Error loading categories: {e}. Please try again later.")
+
+    def get_categories_with_any(self) -> list[str]:
+        """Get the categories with the 'Any Category' option
+
+        Returns:
+            list[str]: The categories with the 'Any Category' option
+        """
+        categories: list[str] = ["Any Category"]
+        categories.extend(sorted(self.categories.keys()))
+        return categories

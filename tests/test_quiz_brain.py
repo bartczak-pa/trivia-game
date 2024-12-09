@@ -45,3 +45,28 @@ class TestQuizBrain:
         self.mock_controller.show_error.assert_called_once_with(
             f"Error loading categories: {error_message}. Please try again later."
         )
+
+    def test_get_categories_with_any_success(self):
+        """Test successful retrieval of categories with 'Any Category' option"""
+        # Arrange
+        self.quiz_brain.categories = {"History": "1", "Animals": "2", "Geography": "3"}
+
+        # Act
+        result = self.quiz_brain.get_categories_with_any()
+
+        # Assert
+        assert result[0] == "Any Category"
+        assert result[1:] == ["Animals", "Geography", "History"]
+        assert len(result) == len(self.quiz_brain.categories) + 1
+
+    def test_get_categories_with_any_empty_categories(self):
+        """Test retrieval with empty categories dictionary"""
+        # Arrange
+        self.quiz_brain.categories = {}
+
+        # Act
+        result = self.quiz_brain.get_categories_with_any()
+
+        # Assert
+        assert result == ["Any Category"]
+        assert len(result) == 1

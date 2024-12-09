@@ -17,7 +17,6 @@ class AppInterface(ctk.CTk, AppControllerProtocol):
 
         # Initialize the quiz brain
         self.quiz_brain = QuizBrain(self)
-        print(self.quiz_brain.categories)
 
         # Configure the main window grid
         self.grid_rowconfigure(0, weight=1)
