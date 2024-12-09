@@ -60,8 +60,8 @@ class StartGameFrame(ctk.CTkFrame):
 
         # Option menus
         categories = controller.quiz_brain.get_categories_with_any()
-        difficulties = ["Any Difficulty", "Easy", "Medium", "Hard"]
-        types = ["Any Type", "Multiple Choice", "True/False"]
+        difficulties = controller.quiz_brain.get_difficulties()
+        types = controller.quiz_brain.get_question_types()
 
         # Category selection
         ctk.CTkLabel(self, text="Category:").grid(row=2, column=1, pady=(20, 5), sticky="w")

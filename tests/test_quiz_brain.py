@@ -101,3 +101,25 @@ class TestQuizBrain:
         # Act & Assert
         with pytest.raises(KeyError):
             self.quiz_brain.get_category_id("Invalid Category")
+
+    def test_get_difficulties(self):
+        """Test getting difficulty levels"""
+        # Act
+        result = self.quiz_brain.get_difficulties()
+
+        # Assert
+        expected = ["Any Difficulty", "Easy", "Medium", "Hard"]
+        assert result == expected
+        assert len(result) == 4
+        assert result[0] == "Any Difficulty"
+
+    def test_get_question_types(self):
+        """Test getting question types"""
+        # Act
+        result = self.quiz_brain.get_question_types()
+
+        # Assert
+        expected = ["Any Type", "Multiple Choice", "True / False"]
+        assert result == expected
+        assert len(result) == 3
+        assert result[0] == "Any Type"

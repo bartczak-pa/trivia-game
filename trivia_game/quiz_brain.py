@@ -51,3 +51,21 @@ class QuizBrain(TriviaGameProtocol):
         if category_name == "Any Category":
             return None
         return self.categories[category_name]
+
+    def get_difficulties(self) -> list[str]:
+        """Get the difficulties for the quiz
+
+        Returns:
+            list[str]: The difficulties
+
+        """
+        return ["Any Difficulty", "Easy", "Medium", "Hard"]
+
+    def get_question_types(self) -> list[str]:
+        """Get the question types for the quiz
+
+        Returns:
+            list[str]: The question types
+
+        """
+        return ["Any Type", "Multiple Choice", "True / False"]
