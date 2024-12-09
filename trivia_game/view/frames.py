@@ -45,6 +45,7 @@ class StartGameFrame(ctk.CTkFrame):
 
         """
         super().__init__(parent)
+        self.controller = controller
 
         # Configure frame grid
         self.grid_rowconfigure(0, weight=2)  # Top spacing
@@ -89,7 +90,7 @@ class StartGameFrame(ctk.CTkFrame):
         print(question_type)  # TODO: Remove this line when done
 
         # Start game button
-        ctk.CTkButton(self, text="Start Game", command=lambda: controller.show_frame(StartGameFrame), width=200).grid(
+        ctk.CTkButton(self, text="Start Game", command=lambda: self.print_values(), width=200).grid(
             row=5, column=1, pady=30
         )  # TODO: Add command to start the game
 
@@ -97,6 +98,24 @@ class StartGameFrame(ctk.CTkFrame):
         ctk.CTkButton(self, text="Back to Menu", command=lambda: controller.show_frame(MainMenuFrame), width=200).grid(
             row=6, column=1, pady=(0, 30)
         )  # More bottom padding
+
+    def get_selected_values(self) -> tuple[str | None, str | None, str | None]:
+        """Get currently selected values from option menus
+
+        Returns:
+            tuple[str | None, str | None, str | None]: The selected values
+        """
+        category_id = self.controller.quiz_brain.get_category_id(self.category_var.get())
+        difficulty_value = self.controller.quiz_brain.get_difficulty_value(self.difficulty_var.get())
+        question_type = self.controller.quiz_brain.get_question_type_value(self.type_var.get())
+        return category_id, difficulty_value, question_type
+
+    def print_values(self) -> None:
+        """Print selected values (for testing)"""
+        category_id, difficulty_value, question_type = self.get_selected_values()
+        print(f"Category: {category_id}")
+        print(f"Difficulty: {difficulty_value}")
+        print(f"Type: {question_type}")
 
 
 class ScoreboardFrame(ctk.CTkFrame):

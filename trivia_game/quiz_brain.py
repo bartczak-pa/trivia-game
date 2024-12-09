@@ -82,6 +82,10 @@ class QuizBrain(TriviaGameProtocol):
 
     def get_question_type_value(self, question_type: str) -> str | None:
         """Get API-compatible question type value"""
-        type_mapping: dict[str, str | None] = {"Any Type": None, "Multiple Choice": "multiple", "True/False": "boolean"}
+        type_mapping: dict[str, str | None] = {
+            "Any Type": None,
+            "Multiple Choice": "multiple",
+            "True / False": "boolean",
+        }
 
         return type_mapping[question_type]

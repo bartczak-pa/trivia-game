@@ -145,7 +145,7 @@ class TestQuizBrain:
     def test_get_question_type_value_returns_correct_type(self):
         """Test that question types are correctly mapped"""
         # Arrange
-        test_cases = {"Multiple Choice": "multiple", "True/False": "boolean"}
+        test_cases = {"Multiple Choice": "multiple", "True / False": "boolean"}
 
         # Act & Assert
         for input_value, expected in test_cases.items():
