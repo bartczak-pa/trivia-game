@@ -1,3 +1,5 @@
+from tkinter import messagebox as CTkMessagebox
+
 import customtkinter as ctk  # type: ignore[import-untyped]
 
 from trivia_game.base_types import AppControllerProtocol
@@ -15,6 +17,7 @@ class AppInterface(ctk.CTk, AppControllerProtocol):
 
         # Initialize the quiz brain
         self.quiz_brain = QuizBrain(self)
+        print(self.quiz_brain.categories)
 
         # Configure the main window grid
         self.grid_rowconfigure(0, weight=1)
@@ -47,6 +50,14 @@ class AppInterface(ctk.CTk, AppControllerProtocol):
         """
         frame = self.frames[frame_class]
         frame.tkraise()
+
+    def show_error(self, message: str) -> None:
+        """Show an error message
+
+        Args:
+            message (str): The error message to display
+        """
+        CTkMessagebox.showerror("Error", message)
 
     def quit(self) -> None:
         """Quit the application"""

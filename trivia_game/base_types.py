@@ -12,6 +12,14 @@ class AppControllerProtocol(Protocol):
 
     """Quit the application"""
 
+    def show_error(self, message: str) -> None: ...
+
+    """Show an error message
+
+            Args:
+                message (str): The error message to display
+            """
+
 
 class TriviaGameProtocol(Protocol):
-    pass
+    def _load_categories(self) -> None: ...

@@ -1,4 +1,5 @@
 from trivia_game.base_types import AppControllerProtocol, TriviaGameProtocol
+from trivia_game.exceptions import CategoryError
 from trivia_game.trivia_api import TriviaAPIClient
 
 
@@ -16,5 +17,13 @@ class QuizBrain(TriviaGameProtocol):
         """
         self.controller: AppControllerProtocol = controller
         self.api_client: TriviaAPIClient = TriviaAPIClient()
-        self.categories: dict[str, str] = self.api_client.fetch_categories()
-        print(self.categories)
+        self.categories: dict[str, str] = {}
+
+        self._load_categories()
+
+    def _load_categories(self) -> None:
+        """Load trivia categories from the API"""
+        try:
+            self.categories = self.api_client.fetch_categories()
+        except CategoryError as e:
+            self.controller.show_error(f"Error loading categories: {e}. Please try again later.")
