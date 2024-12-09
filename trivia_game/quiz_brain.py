@@ -48,9 +48,7 @@ class QuizBrain(TriviaGameProtocol):
             str | None: The category ID or None if 'Any Category'
 
         """
-        if category_name == "Any Category":
-            return None
-        return self.categories[category_name]
+        return None if category_name == "Any Category" else self.categories[category_name]
 
     def get_available_difficulties(self) -> list[str]:
         """ "Get list of available difficulty levels
@@ -60,6 +58,18 @@ class QuizBrain(TriviaGameProtocol):
 
         """
         return ["Any Difficulty", "Easy", "Medium", "Hard"]
+
+    def get_difficulty_value(self, difficulty_name: str) -> str | None:
+        """Get the difficulty value for the API request
+
+        Args:
+            difficulty_name (str): The difficulty name
+
+        Returns:
+            str | None: The difficulty value or None if 'Any Difficulty'
+
+        """
+        return None if difficulty_name == "Any Difficulty" else difficulty_name.lower()
 
     def get_available_question_types(self) -> list[str]:
         """Get the question types for the quiz

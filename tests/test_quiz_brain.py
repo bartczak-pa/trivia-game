@@ -123,3 +123,21 @@ class TestQuizBrain:
         assert result == expected
         assert len(result) == 3
         assert result[0] == "Any Type"
+
+    def test_get_difficulty_value_returns_none_for_any(self):
+        """Test that 'Any Difficulty' returns None"""
+        # Act
+        result = self.quiz_brain.get_difficulty_value("Any Difficulty")
+
+        # Assert
+        assert result is None
+
+    def test_get_difficulty_value_returns_lowercase(self):
+        """Test that difficulty values are returned in lowercase"""
+        # Arrange
+        test_cases = {"Easy": "easy", "Medium": "medium", "Hard": "hard"}
+
+        # Act & Assert
+        for input_value, expected in test_cases.items():
+            result = self.quiz_brain.get_difficulty_value(input_value)
+            assert result == expected

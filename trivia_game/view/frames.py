@@ -78,6 +78,8 @@ class StartGameFrame(ctk.CTkFrame):
         ctk.CTkOptionMenu(self, variable=self.difficulty_var, values=difficulties, width=200).grid(
             row=3, column=1, pady=5
         )
+        difficulty_value = controller.quiz_brain.get_difficulty_value(self.difficulty_var.get())
+        print(difficulty_value)  # TODO: Remove this line when done
 
         # Question type selection
         ctk.CTkLabel(self, text="Question Type:").grid(row=4, column=1, pady=5, sticky="w")
