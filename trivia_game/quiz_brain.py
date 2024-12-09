@@ -37,3 +37,17 @@ class QuizBrain(TriviaGameProtocol):
         categories: list[str] = ["Any Category"]
         categories.extend(sorted(self.categories.keys()))
         return categories
+
+    def get_category_id(self, category_name: str) -> str | None:
+        """Get category ID for API request
+
+        Args:
+            category_name (str): The category name
+
+        Returns:
+            str | None: The category ID or None if 'Any Category'
+
+        """
+        if category_name == "Any Category":
+            return None
+        return self.categories[category_name]

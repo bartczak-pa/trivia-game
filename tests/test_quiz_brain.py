@@ -70,3 +70,34 @@ class TestQuizBrain:
         # Assert
         assert result == ["Any Category"]
         assert len(result) == 1
+
+    def test_get_category_id_returns_none_for_any_category(self):
+        """Test that 'Any Category' returns None"""
+        # Arrange
+        self.quiz_brain.categories = {"History": "1", "Science": "2"}
+
+        # Act
+        result = self.quiz_brain.get_category_id("Any Category")
+
+        # Assert
+        assert result is None
+
+    def test_get_category_id_returns_correct_id(self):
+        """Test that correct category ID is returned"""
+        # Arrange
+        self.quiz_brain.categories = {"History": "1", "Science": "2"}
+
+        # Act
+        result = self.quiz_brain.get_category_id("History")
+
+        # Assert
+        assert result == "1"
+
+    def test_get_category_id_invalid_category(self):
+        """Test that invalid category raises KeyError"""
+        # Arrange
+        self.quiz_brain.categories = {"History": "1", "Science": "2"}
+
+        # Act & Assert
+        with pytest.raises(KeyError):
+            self.quiz_brain.get_category_id("Invalid Category")

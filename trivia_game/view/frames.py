@@ -69,6 +69,8 @@ class StartGameFrame(ctk.CTkFrame):
         ctk.CTkOptionMenu(self, variable=self.category_var, values=categories, width=200).grid(
             row=2, column=1, pady=(20, 5)
         )
+        category_id = controller.quiz_brain.get_category_id(self.category_var.get())
+        print(category_id)  # TODO: Remove this line when done
 
         # Difficulty selection
         ctk.CTkLabel(self, text="Difficulty:").grid(row=3, column=1, pady=5, sticky="w")
@@ -81,6 +83,11 @@ class StartGameFrame(ctk.CTkFrame):
         ctk.CTkLabel(self, text="Question Type:").grid(row=4, column=1, pady=5, sticky="w")
 
         ctk.CTkOptionMenu(self, variable=self.type_var, values=types, width=200).grid(row=4, column=1, pady=5)
+
+        # Start game button
+        ctk.CTkButton(self, text="Start Game", command=lambda: controller.show_frame(StartGameFrame), width=200).grid(
+            row=5, column=1, pady=30
+        )  # TODO: Add command to start the game
 
         # Back button
         ctk.CTkButton(self, text="Back to Menu", command=lambda: controller.show_frame(MainMenuFrame), width=200).grid(
