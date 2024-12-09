@@ -141,3 +141,19 @@ class TestQuizBrain:
         for input_value, expected in test_cases.items():
             result = self.quiz_brain.get_difficulty_value(input_value)
             assert result == expected
+
+    def test_get_question_type_value_returns_correct_type(self):
+        """Test that question types are correctly mapped"""
+        # Arrange
+        test_cases = {"Multiple Choice": "multiple", "True/False": "boolean"}
+
+        # Act & Assert
+        for input_value, expected in test_cases.items():
+            result = self.quiz_brain.get_question_type_value(input_value)
+            assert result == expected
+
+    def test_get_question_type_value_invalid_type(self):
+        """Test that invalid question type raises KeyError"""
+        # Act & Assert
+        with pytest.raises(KeyError):
+            self.quiz_brain.get_question_type_value("Invalid Type")

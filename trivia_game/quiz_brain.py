@@ -29,7 +29,7 @@ class QuizBrain(TriviaGameProtocol):
             self.controller.show_error(f"Error loading categories: {e}. Please try again later.")
 
     def get_available_categories(self) -> list[str]:
-        """Get the categories with the 'Any Category' option
+        """Get list of available categories including 'Any Category' option
 
         Returns:
             list[str]: The categories with the 'Any Category' option
@@ -39,7 +39,7 @@ class QuizBrain(TriviaGameProtocol):
         return categories
 
     def get_category_id(self, category_name: str) -> str | None:
-        """Get category ID for API request
+        """Get category ID for selected category name"
 
         Args:
             category_name (str): The category name
@@ -60,7 +60,7 @@ class QuizBrain(TriviaGameProtocol):
         return ["Any Difficulty", "Easy", "Medium", "Hard"]
 
     def get_difficulty_value(self, difficulty_name: str) -> str | None:
-        """Get the difficulty value for the API request
+        """Get API-compatible difficulty value"
 
         Args:
             difficulty_name (str): The difficulty name
@@ -72,10 +72,16 @@ class QuizBrain(TriviaGameProtocol):
         return None if difficulty_name == "Any Difficulty" else difficulty_name.lower()
 
     def get_available_question_types(self) -> list[str]:
-        """Get the question types for the quiz
+        """Get list of available question types
 
         Returns:
             list[str]: The question types
 
         """
         return ["Any Type", "Multiple Choice", "True / False"]
+
+    def get_question_type_value(self, question_type: str) -> str | None:
+        """Get API-compatible question type value"""
+        type_mapping: dict[str, str | None] = {"Any Type": None, "Multiple Choice": "multiple", "True/False": "boolean"}
+
+        return type_mapping[question_type]

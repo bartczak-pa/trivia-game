@@ -85,6 +85,8 @@ class StartGameFrame(ctk.CTkFrame):
         ctk.CTkLabel(self, text="Question Type:").grid(row=4, column=1, pady=5, sticky="w")
 
         ctk.CTkOptionMenu(self, variable=self.type_var, values=types, width=200).grid(row=4, column=1, pady=5)
+        question_type = controller.quiz_brain.get_question_type_value(self.type_var.get())
+        print(question_type)  # TODO: Remove this line when done
 
         # Start game button
         ctk.CTkButton(self, text="Start Game", command=lambda: controller.show_frame(StartGameFrame), width=200).grid(
