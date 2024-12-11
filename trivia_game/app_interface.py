@@ -54,15 +54,15 @@ class AppInterface(ctk.CTk, AppControllerProtocol):
             try:
                 frame_class = next(f for f in FRAME_CLASSES if f.__name__ == frame_class)
             except StopIteration as e:
-                msg: str = f"Frame '{frame_class}' not found"
-                raise ValueError(msg) from e
+                stop_iter_msg: str = f"Frame '{frame_class}' not found"
+                raise ValueError(stop_iter_msg) from e
 
         try:
             frame = self.frames[frame_class]
             frame.tkraise()
         except KeyError as exc:
-            msg: str = f"Frame '{frame_class.__name__}' not initialized"
-            raise ValueError(msg) from exc
+            key_err_msg: str = f"Frame '{frame_class.__name__}' not initialized"
+            raise ValueError(key_err_msg) from exc
 
     def show_error(self, message: str) -> None:
         """Show an error message
