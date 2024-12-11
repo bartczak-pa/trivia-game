@@ -1,9 +1,17 @@
+from typing import ClassVar
+
 from trivia_game.base_types import AppControllerProtocol, TriviaGameProtocol
 from trivia_game.exceptions import CategoryError
 from trivia_game.trivia_api import TriviaAPIClient
 
 
 class QuizBrain(TriviaGameProtocol):
+    TYPE_MAPPING: ClassVar[dict[str, str | None]] = {
+        "Any Type": None,
+        "Multiple Choice": "multiple",
+        "True / False": "boolean",
+    }
+
     def __init__(self, controller: AppControllerProtocol) -> None:
         """Create the quiz brain object
 
@@ -82,10 +90,4 @@ class QuizBrain(TriviaGameProtocol):
 
     def get_question_type_value(self, question_type: str) -> str | None:
         """Get API-compatible question type value"""
-        type_mapping: dict[str, str | None] = {
-            "Any Type": None,
-            "Multiple Choice": "multiple",
-            "True / False": "boolean",
-        }
-
-        return type_mapping[question_type]
+        return self.TYPE_MAPPING[question_type]
