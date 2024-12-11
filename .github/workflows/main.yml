@@ -54,7 +54,6 @@ jobs:
         if: ${{ matrix.python-version == '3.13' }}
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          slug: bartczak-pa/trivia-game
 
   check-docs:
     runs-on: ubuntu-latest
