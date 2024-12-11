@@ -24,6 +24,7 @@ deptry = "^0.16.2"
 mypy = "^1.5.1"
 pre-commit = "^3.4.0"
 tox = "^4.11.1"
+pytest-mock = "^3.14.0"
 
 [tool.poetry.group.docs.dependencies]
 mkdocs = "^1.4.2"
@@ -109,6 +110,7 @@ source = ["trivia_game"]
 "tests/*" = ["S101"]
 "tests/test_trivia_api.py" = ["SIM117", "S105"]
 "trivia_game/view/frames.py" = ["F821"]
+"tests/test_frames.py" = ["F841"]
 
 [tool.deptry]
 ignore = ["DEP002"]
