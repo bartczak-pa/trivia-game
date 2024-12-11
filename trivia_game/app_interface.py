@@ -41,13 +41,28 @@ class AppInterface(ctk.CTk, AppControllerProtocol):
 
         self.show_frame(FRAME_CLASSES[0])
 
-    def show_frame(self, frame_name: str | type[ctk.CTkFrame]) -> None:
-        if isinstance(frame_name, str):
-            frame_class = next(f for f in FRAME_CLASSES if f.__name__ == frame_name)
-        else:
-            frame_class = frame_name
-        frame = self.frames[frame_class]
-        frame.tkraise()
+    def show_frame(self, frame_class: str | type[ctk.CTkFrame]) -> None:
+        """Show a frame for the given class or frame name
+
+        Args:
+            frame_class: The class or name of the frame to show
+
+        Raises:
+            ValueError: If the specified frame doesn't exist
+        """
+        if isinstance(frame_class, str):
+            try:
+                frame_class = next(f for f in FRAME_CLASSES if f.__name__ == frame_class)
+            except StopIteration as e:
+                msg: str = f"Frame '{frame_class}' not found"
+                raise ValueError(msg) from e
+
+        try:
+            frame = self.frames[frame_class]
+            frame.tkraise()
+        except KeyError as exc:
+            msg: str = f"Frame '{frame_class.__name__}' not initialized"
+            raise ValueError(msg) from exc
 
     def show_error(self, message: str) -> None:
         """Show an error message
