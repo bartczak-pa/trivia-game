@@ -1,53 +1,56 @@
-from unittest.mock import Mock
+from trivia_game.view.frames.base_frame import BaseFrame
 
-import customtkinter as ctk
-import pytest
 
-from trivia_game.base_types import AppControllerProtocol
+class TestBaseFrame:
+    def test_init_calls_setup_methods(self, mocker, base_frame):
+        """Test if initialization calls required setup methods"""
+        mock_grid = mocker.patch.object(BaseFrame, "_setup_grid")
+        mock_widgets = mocker.patch.object(BaseFrame, "_create_widgets")
+
+        frame = BaseFrame(None, base_frame.controller)
+
+        mock_grid.assert_called_once()
+        mock_widgets.assert_called_once()
+
+
+class TestMainMenuFrame:
+    def test_button_mapping_commands(self, main_menu_frame, mock_controller):
+        """Test if button commands are properly mapped"""
+        # Test navigation buttons
+        main_menu_frame.button_mapping["Start Game"]()
+        mock_controller.show_frame.assert_called_with("StartGameFrame")
+
+        main_menu_frame.button_mapping["High Scores"]()
+        mock_controller.show_frame.assert_called_with("ScoreboardFrame")
+
+        main_menu_frame.button_mapping["Settings"]()
+        mock_controller.show_frame.assert_called_with("AppSettingsFrame")
+
+        # Test quit button
+        main_menu_frame.button_mapping["Exit"]()
+        mock_controller.quit.assert_called_once()
 
 
 class TestStartGameFrame:
-    @pytest.fixture(autouse=True)
-    def setup(self):
-        """Setup test environment"""
-        # Create mock controller with quiz_brain
-        self.mock_controller = Mock(spec=AppControllerProtocol)
-        self.mock_controller.quiz_brain = Mock()
+    def test_get_selected_values(self, start_game_frame, mock_controller):
+        """Test getting selected values from option menus"""
+        # Setup mock returns
+        mock_controller.quiz_brain.get_category_id.return_value = "9"
+        mock_controller.quiz_brain.get_difficulty_value.return_value = "easy"
+        mock_controller.quiz_brain.get_question_type_value.return_value = "multiple"
 
-        # Create parent frame mock with tk attribute
-        self.mock_parent = Mock(spec=ctk.CTkFrame)
-        self.mock_parent.tk = Mock()
+        result = start_game_frame.get_selected_values()
+        assert result == ("9", "easy", "multiple")
 
-        # Setup quiz brain mock with categories
-        self.mock_controller.quiz_brain.categories = {"History": "1", "Science": "2"}
+    def test_option_menus_creation(self, start_game_frame, mock_controller):
+        """Test if option menus are created with correct values"""
 
-        from trivia_game.view.frames import StartGameFrame
+        mock_controller.quiz_brain.get_available_categories.assert_called_once()
+        mock_controller.quiz_brain.get_available_difficulties.assert_called_once()
+        mock_controller.quiz_brain.get_available_question_types.assert_called_once()
 
-        self.frame = StartGameFrame(self.mock_parent, self.mock_controller)
-
-    def test_get_selected_values(self):
-        """Test getting all selected values"""
-        # Arrange
-        test_cases = [
-            {
-                "category": "Any Category",
-                "difficulty": "Any Difficulty",
-                "type": "Any Type",
-                "expected": (None, None, None),
-            },
-            {
-                "category": "History",
-                "difficulty": "Easy",
-                "type": "Multiple Choice",
-                "expected": ("1", "easy", "multiple"),
-            },
-        ]
-
-        # Act & Assert
-        for case in test_cases:
-            self.frame.category_var.set(case["category"])
-            self.frame.difficulty_var.set(case["difficulty"])
-            self.frame.type_var.set(case["type"])
-
-            result = self.frame.get_selected_values()
-            assert result == case["expected"]
+    def test_initial_variable_values(self, start_game_frame):
+        """Test if variables are initialized with correct default values"""
+        assert start_game_frame.category_var.get() == "Any Category"
+        assert start_game_frame.difficulty_var.get() == "Any Difficulty"
+        assert start_game_frame.type_var.get() == "Any Type"

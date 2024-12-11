@@ -4,7 +4,7 @@ import customtkinter as ctk  # type: ignore[import-untyped]
 
 from trivia_game.base_types import AppControllerProtocol
 from trivia_game.quiz_brain import QuizBrain
-from trivia_game.view.frames import FRAME_CLASSES, MainMenuFrame
+from trivia_game.view.frames import FRAME_CLASSES
 
 
 class AppInterface(ctk.CTk, AppControllerProtocol):
@@ -39,14 +39,13 @@ class AppInterface(ctk.CTk, AppControllerProtocol):
             self.frames[F] = frame
             frame.grid(row=0, column=0, sticky="nsew")
 
-        self.show_frame(MainMenuFrame)
+        self.show_frame(FRAME_CLASSES[0])
 
-    def show_frame(self, frame_class: type[ctk.CTkFrame]) -> None:
-        """Show a frame for the given class
-
-        Args:
-            frame_class (type[ctk.CTkFrame]): The class of the frame to show
-        """
+    def show_frame(self, frame_name: str | type[ctk.CTkFrame]) -> None:
+        if isinstance(frame_name, str):
+            frame_class = next(f for f in FRAME_CLASSES if f.__name__ == frame_name)
+        else:
+            frame_class = frame_name
         frame = self.frames[frame_class]
         frame.tkraise()
 

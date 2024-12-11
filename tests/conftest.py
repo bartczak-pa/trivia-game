@@ -2,7 +2,10 @@ from unittest.mock import Mock
 
 import pytest
 
+from trivia_game.base_types import AppControllerProtocol, TriviaGameProtocol
 from trivia_game.trivia_api import TriviaAPIClient
+from trivia_game.view.frames import MainMenuFrame
+from trivia_game.view.frames.base_frame import BaseFrame
 
 
 @pytest.fixture
@@ -59,3 +62,73 @@ def mock_questions_success(mock_response):
         ],
     }
     return mock_response
+
+
+@pytest.fixture
+def mock_controller():
+    """Create mock controller with quiz brain"""
+    controller = Mock(spec=AppControllerProtocol)
+    controller.quiz_brain = Mock(spec=TriviaGameProtocol)
+
+    # Setup quiz brain mock methods
+    controller.quiz_brain.get_available_categories.return_value = ["Any Category", "History"]
+    controller.quiz_brain.get_available_difficulties.return_value = ["Any Difficulty", "Easy"]
+    controller.quiz_brain.get_available_question_types.return_value = ["Any Type", "Multiple Choice"]
+
+    return controller
+
+
+@pytest.fixture
+def mock_customtkinter(mocker):
+    """Mock all customtkinter widgets and attributes"""
+    mocker.patch("customtkinter.CTkFrame.__init__", return_value=None)
+    mocker.patch("customtkinter.CTkButton")
+    mocker.patch("customtkinter.CTkLabel")
+    mocker.patch("customtkinter.CTkOptionMenu")
+    mocker.patch.object(BaseFrame, "tk", create=True)
+    mocker.patch.object(BaseFrame, "_w", create=True)
+
+    # Create separate StringVar mocks for each variable
+    category_var = mocker.MagicMock()
+    category_var.get.return_value = "Any Category"
+
+    difficulty_var = mocker.MagicMock()
+    difficulty_var.get.return_value = "Any Difficulty"
+
+    type_var = mocker.MagicMock()
+    type_var.get.return_value = "Any Type"
+
+    # Patch StringVar to return different mocks based on initial value
+    def mock_stringvar(value=None):
+        if value == "Any Category":
+            return category_var
+        elif value == "Any Difficulty":
+            return difficulty_var
+        else:
+            return type_var
+
+    mocker.patch("customtkinter.StringVar", side_effect=mock_stringvar)
+
+
+@pytest.fixture
+def base_frame(mock_controller, mock_customtkinter):
+    """Create base frame instance"""
+    from trivia_game.view.frames.base_frame import BaseFrame
+
+    return BaseFrame(None, mock_controller)
+
+
+@pytest.fixture
+def main_menu_frame(mock_controller, mock_customtkinter):
+    frame = MainMenuFrame(None, mock_controller)
+    frame.tk = Mock()
+    frame._w = "mock_widget"
+    return frame
+
+
+@pytest.fixture
+def start_game_frame(mock_controller, mock_customtkinter):
+    """Create start game frame instance"""
+    from trivia_game.view.frames.start_game import StartGameFrame
+
+    return StartGameFrame(None, mock_controller)
