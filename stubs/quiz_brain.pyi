@@ -7,6 +7,9 @@ class QuizBrain:
     controller: AppControllerProtocol
     api_client: TriviaAPIClient
     categories: dict[str, str]
+    current_question: dict
+    questions: list
+    score: int
     TYPE_MAPPING: ClassVar[dict[str, str | None]]
 
     def __init__(self, controller: AppControllerProtocol) -> None: ...

@@ -17,15 +17,23 @@ class QuizBrain(TriviaGameProtocol):
 
         Args:
             controller (AppControllerProtocol): The main application controller
-        Attributes:
-            self.controller (AppControllerProtocol): The main application controller
-            self.api_client (trivia_api.TriviaAPIClient): The trivia API client
-            self.categories (dict[str, str]): The trivia categories
 
+        Attributes:
+            controller (AppControllerProtocol): The main application controller
+            api_client (TriviaAPIClient): The API client
+            categories (dict[str, str]): The trivia categories
+            current_question (dict): The current question being displayed
+            questions (list[dict]): The list of questions for the current game
+            score (int): The current score
         """
+
         self.controller: AppControllerProtocol = controller
         self.api_client: TriviaAPIClient = TriviaAPIClient()
+
         self.categories: dict[str, str] = {}
+        self.current_question: dict = {}
+        self.questions: list = []
+        self.score: int = 0
 
         self._load_categories()
 
