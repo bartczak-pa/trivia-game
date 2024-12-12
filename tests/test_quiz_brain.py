@@ -157,3 +157,83 @@ class TestQuizBrain:
         # Act & Assert
         with pytest.raises(KeyError):
             self.quiz_brain.get_question_type_value("Invalid Type")
+
+    def test_load_questions_success(self, mock_questions_success):
+        """Test loading questions successfully"""
+        # Arrange
+        expected_questions = mock_questions_success.json()["results"]
+        self.quiz_brain.api_client.fetch_questions = Mock(return_value=expected_questions)
+
+        # Act
+        self.quiz_brain.load_questions("9", "easy", "any")
+
+        # Assert
+        assert len(self.quiz_brain.questions) == len(expected_questions)
+        assert self.quiz_brain.score == 0
+        self.quiz_brain.api_client.fetch_questions.assert_called_once_with(
+            category="9", difficulty="easy", question_type="any"
+        )
+        self.mock_controller.show_error.assert_not_called()
+
+    def test_load_questions_handles_error(self):
+        """Test question loading error handling"""
+        # Arrange
+        error_message = "API Error"
+        self.quiz_brain.api_client.fetch_questions = Mock(side_effect=Exception(error_message))
+
+        # Act
+        self.quiz_brain.load_questions(None, None, None)
+
+        # Assert
+        self.mock_controller.show_error.assert_called_once_with(f"Error loading questions: {error_message}")
+
+    def test_show_next_question_with_questions(self):
+        """Test showing next question when questions are available"""
+        # Arrange
+        test_questions = [{"type": "boolean", "question": "Test1?"}, {"type": "multiple", "question": "Test2?"}]
+        self.quiz_brain.questions = test_questions.copy()
+
+        # Act
+        self.quiz_brain.show_next_question()
+
+        # Assert
+        assert self.quiz_brain.current_question == test_questions[0]
+        assert len(self.quiz_brain.questions) == 1
+        self.mock_controller.show_frame.assert_called_once_with("TrueFalseQuizFrame")
+
+    def test_show_next_question_empty_questions(self):
+        """Test showing next question with no questions remaining"""
+        # Arrange
+        self.quiz_brain.questions = []
+
+        # Act
+        self.quiz_brain.show_next_question()
+
+        # Assert
+        self.mock_controller.show_frame.assert_called_once_with("ScoreboardFrame")
+
+    def test_check_answer_correct(self):
+        """Test checking correct answer"""
+        # Arrange
+        self.quiz_brain.current_question = {"correct_answer": "True"}
+        initial_score = self.quiz_brain.score
+
+        # Act
+        result = self.quiz_brain.check_answer("True")
+
+        # Assert
+        assert result is True
+        assert self.quiz_brain.score == initial_score + 100
+
+    def test_check_answer_incorrect(self):
+        """Test checking incorrect answer"""
+        # Arrange
+        self.quiz_brain.current_question = {"correct_answer": "True"}
+        initial_score = self.quiz_brain.score
+
+        # Act
+        result = self.quiz_brain.check_answer("False")
+
+        # Assert
+        assert result is False
+        assert self.quiz_brain.score == initial_score

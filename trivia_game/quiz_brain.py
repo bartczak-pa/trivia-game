@@ -1,4 +1,4 @@
-from typing import ClassVar
+from typing import ClassVar, Literal
 
 from trivia_game.base_types import AppControllerProtocol, TriviaGameProtocol
 from trivia_game.exceptions import CategoryError
@@ -99,3 +99,44 @@ class QuizBrain(TriviaGameProtocol):
     def get_question_type_value(self, question_type: str) -> str | None:
         """Get API-compatible question type value"""
         return self.TYPE_MAPPING[question_type]
+
+    def load_questions(
+        self,
+        category: str | None,
+        difficulty: Literal["easy", "medium", "hard"] | None,
+        question_type: Literal["multiple", "boolean"] | None,
+    ) -> None:
+        """Load questions from the API
+
+        Args:
+            category (str | None): The category ID or None for 'Any Category'
+            difficulty (str | None): The difficulty level or None for 'Any Difficulty'
+            question_type (str | None): The question type or None for 'Any Type'
+        """
+        try:
+            self.questions = self.api_client.fetch_questions(
+                category=category, difficulty=difficulty, question_type=question_type
+            )
+            self.score = 0
+            self.show_next_question()
+        except Exception as e:
+            msg: str = f"Error loading questions: {e}"
+            self.controller.show_error(msg)
+
+    def show_next_question(self) -> None:
+        """Show next question or end game if no more questions"""
+        if not self.questions:
+            self.controller.show_frame("ScoreboardFrame")  # TODO: Work on ScoreboardFrame
+            return
+
+        self.current_question = self.questions.pop(0)
+        self.controller.show_frame(
+            "TrueFalseQuizFrame" if self.current_question["type"] == "boolean" else "MultipleChoiceQuizFrame"
+        )
+
+    def check_answer(self, selected_answer: str) -> bool:
+        is_correct: bool = selected_answer == self.current_question["correct_answer"]
+
+        if is_correct:
+            self.score += 100
+        return is_correct
