@@ -13,52 +13,26 @@ class BaseQuizFrame(BaseFrame):
 
     def _create_widgets(self) -> None:
         """Create and place widgets"""
+        self._create_question_frame()
         self._create_question_label()
-        self._create_answer_buttons()
+
+    def _create_question_frame(self) -> None:
+        """Create and place frame for question"""
+        self.question_frame = ctk.CTkFrame(self, fg_color=("gray85", "gray25")).grid(
+            row=2, column=1, pady=20, padx=40, sticky="nsew"
+        )
 
     def _create_question_label(self) -> None:
         """Create and place question label"""
-        self.question_label: ctk.CTkLabel = ctk.CTkLabel(self, text="Question text here", wraplength=600)
-        self.question_label.grid(row=1, column=1, pady=20)
-
-    def _create_answer_buttons(self) -> None:
-        """Create answer buttons - override in subclasses"""
-        pass
+        self.question_label = ctk.CTkLabel(
+            self.question_frame, text="Question text here", wraplength=600, pady=20, padx=20
+        ).grid(row=0, column=0, sticky="nsew")
 
     def _handle_answer(self, answer: str) -> None:
-        """Handle answer selection - override in subclasses
+        """Handle user's answer selection
 
         Args:
             answer (str): The selected answer
         """
+        # Base implementation - override in subclasses if needed
         print(f"Selected answer: {answer}")  # For testing
-
-
-class TrueFalseQuizFrame(BaseQuizFrame):
-    def _create_answer_buttons(self) -> None:
-        """Create True/False buttons"""
-        button_frame: ctk.CTkFrame = ctk.CTkFrame(self)
-        button_frame.grid(row=2, column=1)
-
-        ctk.CTkButton(button_frame, text="True", command=lambda: self._handle_answer("True"), width=200).grid(
-            row=0, column=0, padx=10, pady=20
-        )
-
-        ctk.CTkButton(button_frame, text="False", command=lambda: self._handle_answer("False"), width=200).grid(
-            row=0, column=1, padx=10, pady=20
-        )
-
-
-class MultipleChoiceQuizFrame(BaseQuizFrame):
-    def _create_answer_buttons(self) -> None:
-        """Create multiple choice buttons"""
-        button_frame: ctk.CTkFrame = ctk.CTkFrame(self)
-        button_frame.grid(row=2, column=1)
-
-        # TODO: Replace with actual answers
-        for idx, answer in enumerate(["A", "B", "C", "D"]):
-            row = idx // 2
-            col = idx % 2
-            ctk.CTkButton(button_frame, text=answer, command=lambda a=answer: self._handle_answer(a), width=200).grid(
-                row=row, column=col, padx=10, pady=10
-            )
