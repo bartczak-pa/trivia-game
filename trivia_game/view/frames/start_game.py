@@ -46,7 +46,7 @@ class StartGameFrame(BaseFrame):
     def _create_buttons(self) -> None:
         """Create and place buttons"""
         ctk.CTkButton(
-            self, text="Start Game", command=lambda: self.controller.show_frame("MultipleChoiceQuizFrame"), width=200
+            self, text="Start Game", command=lambda: self.controller.show_frame("TrueFalseQuizFrame"), width=200
         ).grid(row=5, column=1, pady=30)
         ctk.CTkButton(
             self, text="Back to Menu", command=lambda: self.controller.show_frame("MainMenuFrame"), width=200
