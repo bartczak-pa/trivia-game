@@ -7,6 +7,9 @@ from trivia_game.view.frames import MainMenuFrame
 from trivia_game.view.frames.base_frame import BaseFrame
 from trivia_game.view.frames.quiz_frames import BaseQuizFrame, MultipleChoiceQuizFrame, TrueFalseQuizFrame
 
+# Ignore folder in progress
+collect_ignore = ["in_progress/"]
+
 
 @pytest.fixture
 def trivia_client():
