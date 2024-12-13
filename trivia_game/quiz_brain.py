@@ -7,6 +7,7 @@ from trivia_game.trivia_api import TriviaAPIClient
 
 
 class QuizBrain(TriviaGameProtocol):
+    # Mapping of question types to API-compatible values
     TYPE_MAPPING: ClassVar[dict[str, str | None]] = {
         "Any Type": None,
         "Multiple Choice": "multiple",
@@ -23,8 +24,8 @@ class QuizBrain(TriviaGameProtocol):
             controller (AppControllerProtocol): The main application controller
             api_client (TriviaAPIClient): The API client
             categories (dict[str, str]): The trivia categories
-            current_question (dict): The current question being displayed
-            questions (list[dict]): The list of questions for the current game
+            current_question (Question | None): The current question
+            questions (list[Question]): The list of questions for the current game
             score (int): The current score
         """
 
@@ -53,10 +54,11 @@ class QuizBrain(TriviaGameProtocol):
         """
         categories: list[str] = ["Any Category"]
         categories.extend(sorted(self.categories.keys()))
+
         return categories
 
     def get_category_id(self, category_name: str) -> str | None:
-        """Get category ID for selected category name"
+        """Get category ID for selected category name
 
         Args:
             category_name (str): The category name
@@ -68,7 +70,7 @@ class QuizBrain(TriviaGameProtocol):
         return None if category_name == "Any Category" else self.categories[category_name]
 
     def get_available_difficulties(self) -> list[str]:
-        """ "Get list of available difficulty levels
+        """Get list of available difficulty levels
 
         Returns:
             list[str]: The difficulties
@@ -77,13 +79,13 @@ class QuizBrain(TriviaGameProtocol):
         return ["Any Difficulty", "Easy", "Medium", "Hard"]
 
     def get_difficulty_value(self, difficulty_name: str) -> Literal["easy", "medium", "hard"] | None:
-        """Get API-compatible difficulty value"
+        """Get API-compatible difficulty value
 
         Args:
             difficulty_name (str): The difficulty name
 
         Returns:
-            Literal["easy", "medium", "hard"] | None: The difficulty value
+            Literal["easy", "medium", "hard"] | None: The difficulty value or None if 'Any Difficulty'
         """
         return None if difficulty_name == "Any Difficulty" else difficulty_name.lower()  # type: ignore[return-value]
 
@@ -97,7 +99,15 @@ class QuizBrain(TriviaGameProtocol):
         return ["Any Type", "Multiple Choice", "True / False"]
 
     def get_question_type_value(self, question_type: str) -> str | None:
-        """Get API-compatible question type value"""
+        """Get API-compatible question type value
+
+        Args:
+            question_type (str): The question type
+
+        Returns:
+            str | None: The question type value or None if 'Any Type'
+
+        """
         return self.TYPE_MAPPING[question_type]
 
     def load_questions(
@@ -110,14 +120,13 @@ class QuizBrain(TriviaGameProtocol):
 
         Args:
             category (str | None): The category ID or None for 'Any Category'
-            difficulty (str | None): The difficulty level or None for 'Any Difficulty'
-            question_type (str | None): The question type or None for 'Any Type'
+            difficulty (Literal["easy", "medium", "hard"] | None): The difficulty level or None for 'Any Difficulty'
+            question_type (Literal["multiple", "boolean"] | None): The question type or None for 'Any Type'
         """
         try:
             self.questions = self.api_client.fetch_questions(
                 category=category, difficulty=difficulty, question_type=question_type
             )
-            print(f"Fetched questions: {self.questions}")
             self.score = 0
             self.show_next_question()
         except Exception as e:
@@ -127,12 +136,11 @@ class QuizBrain(TriviaGameProtocol):
     def show_next_question(self) -> None:
         """Show next question or end game if no more questions"""
         if not self.questions:
-            print("No more questions, showing scoreboard")  # TODO: Remove this line
-            self.controller.show_frame("ScoreboardFrame")  # TODO: Work on ScoreboardFrame
+            print("No more questions, showing scoreboard")  # TODO: Remove debug print
+            self.controller.show_frame("ScoreboardFrame")  # TODO: Work on ScoreboardFrame and ending game
             return
 
         self.current_question = self.questions.pop(0)
-        print(f"Showing question: {self.current_question}")
         self.controller.show_frame(
             "TrueFalseQuizFrame" if self.current_question.type == "boolean" else "MultipleChoiceQuizFrame"
         )
@@ -152,5 +160,5 @@ class QuizBrain(TriviaGameProtocol):
         is_correct: bool = selected_answer == self.current_question.correct_answer
 
         if is_correct:
-            self.score += 100
+            self.score += 100  # TODO: Add difficulty multiplier an extract to separate method
         return is_correct

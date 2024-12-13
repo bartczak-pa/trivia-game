@@ -42,26 +42,29 @@ class AppInterface(ctk.CTk, AppControllerProtocol):
         self.show_frame(MainMenuFrame)
 
     def show_frame(self, frame_class: str | type[ctk.CTkFrame]) -> None:
-        """Show a frame for the given class or frame name
+        """Show a frame for the given class or frame name"""
+        frame_type: type[ctk.CTkFrame]
 
-        Args:
-            frame_class: The class or name of the frame to show
-
-        Raises:
-            ValueError: If the specified frame doesn't exist
-        """
         if isinstance(frame_class, str):
             try:
-                frame_class = next(f for f in FRAME_CLASSES if f.__name__ == frame_class)
+                frame_type = next(f for f in FRAME_CLASSES if f.__name__ == frame_class)
             except StopIteration as e:
                 stop_iter_msg: str = f"Frame '{frame_class}' not found"
                 raise ValueError(stop_iter_msg) from e
+        else:
+            frame_type = frame_class
 
         try:
-            frame = self.frames[frame_class]
+            frame = self.frames[frame_type]
             frame.tkraise()
+
+            # Refresh quiz frames after raising
+            if hasattr(frame, "refresh"):
+                print("DEBUG - Calling refresh on frame")
+                frame.refresh()
+
         except KeyError as exc:
-            key_err_msg: str = f"Frame '{frame_class.__name__}' not initialized"
+            key_err_msg: str = f"Frame '{frame_type.__name__}' not initialized"
             raise ValueError(key_err_msg) from exc
 
     def show_error(self, message: str) -> None:

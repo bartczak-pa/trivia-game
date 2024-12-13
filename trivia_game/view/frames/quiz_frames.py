@@ -19,6 +19,7 @@ class BaseQuizFrame(BaseFrame):
         """Create and place widgets"""
         self._create_question_frame()
         self._create_question_label()
+        self.display_question()
 
     def _create_question_frame(self) -> None:
         """Create and place frame for question"""
@@ -32,14 +33,29 @@ class BaseQuizFrame(BaseFrame):
         )
         self.question_label.grid(row=0, column=0, sticky="nsew")
 
+    def _create_answer_buttons(self) -> None:
+        """Create answer buttons - to be implemented by child classes"""
+        raise NotImplementedError("Child classes must implement _create_answer_buttons")
+
     def _handle_answer(self, answer: str) -> None:
-        """Handle user's answer selection
+        """Handle user's answer selection. Base implementation - override in subclasses if needed
 
         Args:
             answer (str): The selected answer
         """
-        # Base implementation - override in subclasses if needed
         print(f"Selected answer: {answer}")  # For testing
+        # TODO: Implement answer handling logic
+
+    def display_question(self) -> None:
+        """Display current question"""
+        if current_question := self.controller.quiz_brain.current_question:
+            question_text = current_question.question
+            self.question_label.configure(text=question_text)
+
+    def refresh(self) -> None:
+        """Refresh frame content. Base implementation - override in subclasses if needed"""
+        self.display_question()
+        self._create_answer_buttons()
 
 
 class TrueFalseQuizFrame(BaseQuizFrame):
@@ -59,10 +75,11 @@ class TrueFalseQuizFrame(BaseQuizFrame):
         button_frame: ctk.CTkFrame = ctk.CTkFrame(self)
         button_frame.grid(row=3, column=1)
 
-        for text in ["True", "False"]:
-            ctk.CTkButton(button_frame, text=text, command=lambda t=text: self._handle_answer(t), width=200).grid(
-                row=0, column=0 if text == "True" else 1, padx=10, pady=20
-            )
+        if _ := self.controller.quiz_brain.current_question:
+            for text in ["True", "False"]:
+                ctk.CTkButton(button_frame, text=text, command=lambda t=text: self._handle_answer(t), width=200).grid(
+                    row=0, column=0 if text == "True" else 1, padx=10, pady=20
+                )
 
 
 class MultipleChoiceQuizFrame(BaseQuizFrame):
@@ -77,19 +94,15 @@ class MultipleChoiceQuizFrame(BaseQuizFrame):
 
     def _create_answer_buttons(self) -> None:
         """Create multiple choice buttons"""
-        button_frame = ctk.CTkFrame(self)
+        button_frame: ctk.CTkFrame = ctk.CTkFrame(self)
         button_frame.grid(row=3, column=1)
 
-        # Get all answers and shuffle them
-        question = self.controller.quiz_brain.current_question
-        print(question)  # For testing
-        answers = ["Answer 1", "Answer 2", "Answer 3", "Answer 4"]
-        # TODO: Replace with actual answers from the API
-        random.shuffle(answers)
+        if current_question := self.controller.quiz_brain.current_question:
+            answers = current_question.all_answers()
+            random.shuffle(answers)
 
-        # Create buttons in 2x2 grid
-        for idx, answer in enumerate(answers):
-            row, col = divmod(idx, 2)  # Calculate grid position
-            ctk.CTkButton(button_frame, text=answer, command=lambda a=answer: self._handle_answer(a), width=200).grid(
-                row=row, column=col, padx=10, pady=10
-            )
+            for idx, answer in enumerate(answers):
+                row, col = divmod(idx, 2)
+                ctk.CTkButton(
+                    button_frame, text=answer, command=lambda a=answer: self._handle_answer(a), width=200
+                ).grid(row=row, column=col, padx=10, pady=10)
