@@ -12,9 +12,6 @@ runs:
   steps:
     - name: Set up python
       uses: actions/setup-python@v5
-      with:
-        python-version: ${{ inputs.python-version }}
-
     - name: Install Poetry
       env:
         POETRY_VERSION: "1.7.1"
