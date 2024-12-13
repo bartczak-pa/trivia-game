@@ -76,17 +76,16 @@ class QuizBrain(TriviaGameProtocol):
         """
         return ["Any Difficulty", "Easy", "Medium", "Hard"]
 
-    def get_difficulty_value(self, difficulty_name: str) -> str | None:
+    def get_difficulty_value(self, difficulty_name: str) -> Literal["easy", "medium", "hard"] | None:
         """Get API-compatible difficulty value"
 
         Args:
             difficulty_name (str): The difficulty name
 
         Returns:
-            str | None: The difficulty value or None if 'Any Difficulty'
-
+            Literal["easy", "medium", "hard"] | None: The difficulty value
         """
-        return None if difficulty_name == "Any Difficulty" else difficulty_name.lower()
+        return None if difficulty_name == "Any Difficulty" else difficulty_name.lower()  # type: ignore[return-value]
 
     def get_available_question_types(self) -> list[str]:
         """Get list of available question types
