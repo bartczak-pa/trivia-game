@@ -2,6 +2,7 @@ from typing import ClassVar, Literal
 
 from trivia_game.base_types import AppControllerProtocol, TriviaGameProtocol
 from trivia_game.exceptions import CategoryError
+from trivia_game.models import Question
 from trivia_game.trivia_api import TriviaAPIClient
 
 
@@ -31,8 +32,8 @@ class QuizBrain(TriviaGameProtocol):
         self.api_client: TriviaAPIClient = TriviaAPIClient()
 
         self.categories: dict[str, str] = {}
-        self.current_question: dict = {}
-        self.questions: list = []
+        self.current_question: Question | None = None
+        self.questions: list[Question] = []
         self.score: int = 0
 
         self._load_categories()
@@ -117,6 +118,7 @@ class QuizBrain(TriviaGameProtocol):
             self.questions = self.api_client.fetch_questions(
                 category=category, difficulty=difficulty, question_type=question_type
             )
+            print(f"Fetched questions: {self.questions}")
             self.score = 0
             self.show_next_question()
         except Exception as e:
@@ -126,16 +128,29 @@ class QuizBrain(TriviaGameProtocol):
     def show_next_question(self) -> None:
         """Show next question or end game if no more questions"""
         if not self.questions:
+            print("No more questions, showing scoreboard")  # TODO: Remove this line
             self.controller.show_frame("ScoreboardFrame")  # TODO: Work on ScoreboardFrame
             return
 
         self.current_question = self.questions.pop(0)
+        print(f"Showing question: {self.current_question}")
         self.controller.show_frame(
-            "TrueFalseQuizFrame" if self.current_question["type"] == "boolean" else "MultipleChoiceQuizFrame"
+            "TrueFalseQuizFrame" if self.current_question.type == "boolean" else "MultipleChoiceQuizFrame"
         )
 
     def check_answer(self, selected_answer: str) -> bool:
-        is_correct: bool = selected_answer == self.current_question["correct_answer"]
+        """Check if selected answer is correct
+
+        Args:
+            selected_answer (str): The selected answer
+
+        Returns:
+            bool: True if correct, False otherwise
+        """
+        if not self.current_question:
+            return False
+
+        is_correct: bool = selected_answer == self.current_question.correct_answer
 
         if is_correct:
             self.score += 100

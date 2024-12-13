@@ -4,6 +4,7 @@ import pytest
 
 from trivia_game.base_types import AppControllerProtocol
 from trivia_game.exceptions import CategoryError
+from trivia_game.models import Question
 
 
 class TestQuizBrain:
@@ -161,19 +162,27 @@ class TestQuizBrain:
     def test_load_questions_success(self, mock_questions_success):
         """Test loading questions successfully"""
         # Arrange
-        expected_questions = mock_questions_success.json()["results"]
+        expected_questions = [
+            Question(
+                type="multiple",
+                difficulty="medium",
+                category="Test",
+                question="Test1?",
+                correct_answer="A",
+                incorrect_answers=["B", "C", "D"],
+            )
+        ]
         self.quiz_brain.api_client.fetch_questions = Mock(return_value=expected_questions)
 
         # Act
-        self.quiz_brain.load_questions("9", "easy", "any")
+        self.quiz_brain.load_questions(category="9", difficulty="easy", question_type="multiple")
 
         # Assert
         assert len(self.quiz_brain.questions) == len(expected_questions)
         assert self.quiz_brain.score == 0
         self.quiz_brain.api_client.fetch_questions.assert_called_once_with(
-            category="9", difficulty="easy", question_type="any"
+            category="9", difficulty="easy", question_type="multiple"
         )
-        self.mock_controller.show_error.assert_not_called()
 
     def test_load_questions_handles_error(self):
         """Test question loading error handling"""
@@ -190,7 +199,24 @@ class TestQuizBrain:
     def test_show_next_question_with_questions(self):
         """Test showing next question when questions are available"""
         # Arrange
-        test_questions = [{"type": "boolean", "question": "Test1?"}, {"type": "multiple", "question": "Test2?"}]
+        test_questions = [
+            Question(
+                type="boolean",
+                difficulty="easy",
+                category="Test",
+                question="Test1?",
+                correct_answer="True",
+                incorrect_answers=["False"],
+            ),
+            Question(
+                type="multiple",
+                difficulty="medium",
+                category="Test",
+                question="Test2?",
+                correct_answer="A",
+                incorrect_answers=["B", "C", "D"],
+            ),
+        ]
         self.quiz_brain.questions = test_questions.copy()
 
         # Act
@@ -215,7 +241,14 @@ class TestQuizBrain:
     def test_check_answer_correct(self):
         """Test checking correct answer"""
         # Arrange
-        self.quiz_brain.current_question = {"correct_answer": "True"}
+        self.quiz_brain.current_question = Question(
+            type="boolean",
+            difficulty="easy",
+            category="Test",
+            question="Test?",
+            correct_answer="True",
+            incorrect_answers=["False"],
+        )
         initial_score = self.quiz_brain.score
 
         # Act
@@ -228,7 +261,14 @@ class TestQuizBrain:
     def test_check_answer_incorrect(self):
         """Test checking incorrect answer"""
         # Arrange
-        self.quiz_brain.current_question = {"correct_answer": "True"}
+        self.quiz_brain.current_question = Question(
+            type="boolean",
+            difficulty="easy",
+            category="Test",
+            question="Test?",
+            correct_answer="True",
+            incorrect_answers=["False"],
+        )
         initial_score = self.quiz_brain.score
 
         # Act

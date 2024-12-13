@@ -2,6 +2,8 @@ from typing import Protocol
 
 import customtkinter as ctk  # type: ignore[import-untyped]
 
+from trivia_game.models import Question
+
 
 class AppControllerProtocol(Protocol):
     quiz_brain: "TriviaGameProtocol"
@@ -13,8 +15,8 @@ class AppControllerProtocol(Protocol):
 
 class TriviaGameProtocol(Protocol):
     categories: dict[str, str]
-    current_question: dict
-    questions: list
+    current_question: Question | None
+    questions: list[Question]
     score: int
 
     def _load_categories(self) -> None: ...

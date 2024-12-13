@@ -1,14 +1,15 @@
 from typing import ClassVar
 
 from trivia_game.base_types import AppControllerProtocol
+from trivia_game.models import Question
 from trivia_game.trivia_api import TriviaAPIClient
 
 class QuizBrain:
     controller: AppControllerProtocol
     api_client: TriviaAPIClient
     categories: dict[str, str]
-    current_question: dict
-    questions: list
+    current_question: Question | None
+    questions: list[Question]
     score: int
     TYPE_MAPPING: ClassVar[dict[str, str | None]]
 
