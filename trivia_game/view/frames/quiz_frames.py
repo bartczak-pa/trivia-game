@@ -1,3 +1,5 @@
+import random
+
 import customtkinter as ctk  # type: ignore[import-untyped]
 
 from trivia_game.view.frames.base_frame import BaseFrame
@@ -60,4 +62,34 @@ class TrueFalseQuizFrame(BaseQuizFrame):
         for text in ["True", "False"]:
             ctk.CTkButton(button_frame, text=text, command=lambda t=text: self._handle_answer(t), width=200).grid(
                 row=0, column=0 if text == "True" else 1, padx=10, pady=20
+            )
+
+
+class MultipleChoiceQuizFrame(BaseQuizFrame):
+    def _setup_grid(self) -> None:
+        """Configure grid layout"""
+        super()._setup_grid()
+
+    def _create_widgets(self) -> None:
+        """Create and place widgets"""
+        super()._create_widgets()
+        self._create_answer_buttons()
+
+    def _create_answer_buttons(self) -> None:
+        """Create multiple choice buttons"""
+        button_frame = ctk.CTkFrame(self)
+        button_frame.grid(row=3, column=1)
+
+        # Get all answers and shuffle them
+        question = self.controller.quiz_brain.current_question
+        print(question)  # For testing
+        answers = ["Answer 1", "Answer 2", "Answer 3", "Answer 4"]
+        # TODO: Replace with actual answers from the API
+        random.shuffle(answers)
+
+        # Create buttons in 2x2 grid
+        for idx, answer in enumerate(answers):
+            row, col = divmod(idx, 2)  # Calculate grid position
+            ctk.CTkButton(button_frame, text=answer, command=lambda a=answer: self._handle_answer(a), width=200).grid(
+                row=row, column=col, padx=10, pady=10
             )

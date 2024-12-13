@@ -12,6 +12,11 @@ class AppControllerProtocol(Protocol):
 
 
 class TriviaGameProtocol(Protocol):
+    categories: dict[str, str]
+    current_question: dict
+    questions: list
+    score: int
+
     def _load_categories(self) -> None: ...
     def get_available_categories(self) -> list[str]: ...
     def get_category_id(self, category_name: str) -> str | None: ...
