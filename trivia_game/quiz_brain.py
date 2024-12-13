@@ -14,6 +14,8 @@ class QuizBrain(TriviaGameProtocol):
         "True / False": "boolean",
     }
 
+    DIFFICULTY_MULTIPLIER: ClassVar[dict[str, int]] = {"easy": 1, "medium": 2, "hard": 3}
+
     def __init__(self, controller: AppControllerProtocol) -> None:
         """Create the quiz brain object
 
@@ -21,12 +23,14 @@ class QuizBrain(TriviaGameProtocol):
             controller (AppControllerProtocol): The main application controller
 
         Attributes:
-            controller (AppControllerProtocol): The main application controller
-            api_client (TriviaAPIClient): The API client
-            categories (dict[str, str]): The trivia categories
-            current_question (Question | None): The current question
-            questions (list[Question]): The list of questions for the current game
-            score (int): The current score
+        controller (AppControllerProtocol): The main application controller
+        api_client (TriviaAPIClient): The API client
+        categories (dict[str, str]): The trivia categories
+        current_question (Question | None): The current question
+        questions (list[Question]): The list of questions for the current game
+        score (int): The current score
+        TYPE_MAPPING (ClassVar[dict[str, str | None]]): Mapping of question types to API-compatible values
+        DIFFICULTY_MULTIPLIER (ClassVar[dict[str, int]]): Difficulty level multipliers
         """
 
         self.controller: AppControllerProtocol = controller
@@ -160,5 +164,16 @@ class QuizBrain(TriviaGameProtocol):
         is_correct: bool = selected_answer == self.current_question.correct_answer
 
         if is_correct:
-            self.score += 100  # TODO: Add difficulty multiplier an extract to separate method
+            self.score += self._calculate_score(self.current_question.difficulty)
         return is_correct
+
+    def _calculate_score(self, difficulty: str) -> int:
+        """Calculate score based on difficulty level
+
+        Args:
+            difficulty (str): The difficulty level
+
+        Returns:
+            int: Calculated score
+        """
+        return 100 * self.DIFFICULTY_MULTIPLIER[difficulty]

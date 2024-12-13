@@ -18,6 +18,7 @@ class BaseQuizFrame(BaseFrame):
     def _create_widgets(self) -> None:
         """Create and place widgets"""
         self._clear_previous_widgets()
+        self._create_score_label()
         self._create_question_frame()
         self._create_question_label()
         self.display_question()
@@ -46,8 +47,12 @@ class BaseQuizFrame(BaseFrame):
         """
         is_correct = self.controller.quiz_brain.check_answer(answer)
 
-        self.question_frame.configure(fg_color="green" if is_correct else "red")
+        # Update score display
+        self.update_score()
 
+        # Show visual feedback
+        self.question_frame.configure(fg_color="green" if is_correct else "red")
+        # Wait and continue
         self.after(1000, lambda _=None: self._reset_and_continue())
 
     def _reset_and_continue(self) -> None:
@@ -71,6 +76,17 @@ class BaseQuizFrame(BaseFrame):
         for widget in self.winfo_children():
             if isinstance(widget, ctk.CTkFrame) and widget != self.question_frame:
                 widget.destroy()
+
+    def _create_score_label(self) -> None:
+        """Create and place score label"""
+        self.score_label: ctk.CTkLabel = ctk.CTkLabel(
+            self, text=f"Score: {self.controller.quiz_brain.score}", font=("Arial", 16, "bold")
+        )
+        self.score_label.grid(row=1, column=1, pady=10)
+
+    def update_score(self) -> None:
+        """Update score label"""
+        self.score_label.configure(text=f"Score: {self.controller.quiz_brain.score}")
 
 
 class TrueFalseQuizFrame(BaseQuizFrame):

@@ -238,42 +238,41 @@ class TestQuizBrain:
         # Assert
         self.mock_controller.show_frame.assert_called_once_with("ScoreboardFrame")
 
-    def test_check_answer_correct(self):
-        """Test checking correct answer"""
-        # Arrange
-        self.quiz_brain.current_question = Question(
-            type="boolean",
-            difficulty="easy",
-            category="Test",
-            question="Test?",
-            correct_answer="True",
-            incorrect_answers=["False"],
-        )
-        initial_score = self.quiz_brain.score
+    def test_check_answer(self, quiz_brain, mock_question):
+        """Test if check_answer correctly validates answers and updates score"""
+        quiz_brain.current_question = mock_question
+        quiz_brain.score = 0
 
-        # Act
-        result = self.quiz_brain.check_answer("True")
+        # Test correct answer
+        mock_question.correct_answer = "True"
+        mock_question.difficulty = "medium"
+        assert quiz_brain.check_answer("True") == True
+        assert quiz_brain.score == 200  # Medium difficulty: 100 * 2
 
-        # Assert
-        assert result is True
-        assert self.quiz_brain.score == initial_score + 100
+        # Test incorrect answer
+        quiz_brain.score = 0
+        assert quiz_brain.check_answer("False") == False
+        assert quiz_brain.score == 0  # Score shouldn't change for incorrect answer
 
-    def test_check_answer_incorrect(self):
-        """Test checking incorrect answer"""
-        # Arrange
-        self.quiz_brain.current_question = Question(
-            type="boolean",
-            difficulty="easy",
-            category="Test",
-            question="Test?",
-            correct_answer="True",
-            incorrect_answers=["False"],
-        )
-        initial_score = self.quiz_brain.score
+        # Test with different difficulties
+        quiz_brain.score = 0
+        mock_question.difficulty = "easy"
+        quiz_brain.check_answer("True")
+        assert quiz_brain.score == 100  # Easy difficulty: 100 * 1
 
-        # Act
-        result = self.quiz_brain.check_answer("False")
+        quiz_brain.score = 0
+        mock_question.difficulty = "hard"
+        quiz_brain.check_answer("True")
+        assert quiz_brain.score == 300  # Hard difficulty: 100 * 3
 
-        # Assert
-        assert result is False
-        assert self.quiz_brain.score == initial_score
+    def test_calculate_score(self, quiz_brain):
+        """Test if _calculate_score returns correct score based on difficulty"""
+        assert quiz_brain._calculate_score("easy") == 100
+        assert quiz_brain._calculate_score("medium") == 200
+        assert quiz_brain._calculate_score("hard") == 300
+
+    def test_calculate_score_unknown_difficulty(self, quiz_brain):
+        """Test if _calculate_score handles unknown difficulty"""
+
+        multiplier = quiz_brain.DIFFICULTY_MULTIPLIER.get("unknown", 1)
+        assert multiplier == 1

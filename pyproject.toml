@@ -111,6 +111,7 @@ source = ["trivia_game"]
 "tests/test_trivia_api.py" = ["SIM117", "S105"]
 "trivia_game/view/frames.py" = ["F821"]
 "tests/test_frames.py" = ["F841"]
+"tests/test_quiz_brain.py" = ["E712"]
 
 [tool.deptry]
 ignore = ["DEP002"]

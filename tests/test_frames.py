@@ -37,6 +37,29 @@ class TestBaseQuizFrame:
 
         assert base_quiz_frame.question_label.cget("text") == mock_question.question
 
+    def test_create_score_label(self, base_quiz_frame, mock_controller):
+        """Test if score label is created with correct initial score"""
+        mock_controller.quiz_brain.score = 100
+        base_quiz_frame._create_score_label()
+
+        # Find score label
+        score_label = base_quiz_frame.score_label
+        assert score_label is not None
+        assert score_label.cget("text") == "Score: 100"
+        assert score_label.cget("font") == ("Arial", 16, "bold")
+
+    def test_update_score(self, base_quiz_frame, mock_controller):
+        """Test if score label updates when score changes"""
+        # Create score label first
+        mock_controller.quiz_brain.score = 0
+        base_quiz_frame._create_score_label()
+
+        # Update quiz brain score and check if label updates
+        mock_controller.quiz_brain.score = 300
+        base_quiz_frame.update_score()
+
+        assert base_quiz_frame.score_label.cget("text") == "Score: 300"
+
 
 class TestTrueFalseQuizFrame:
     def test_create_answer_buttons_with_question(self, true_false_frame, mock_controller, mock_question):

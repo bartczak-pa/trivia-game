@@ -156,3 +156,16 @@ def true_false_frame(mock_controller):
 def multiple_choice_frame(mock_controller):
     """Create a MultipleChoiceQuizFrame instance"""
     return MultipleChoiceQuizFrame(None, mock_controller)
+
+
+@pytest.fixture
+def quiz_brain(mock_controller):
+    """Create a QuizBrain instance with mock controller"""
+    from trivia_game.quiz_brain import QuizBrain
+
+    brain = QuizBrain(mock_controller)
+    brain.score = 0
+    brain.current_question = None
+    brain.questions = []
+
+    return brain
