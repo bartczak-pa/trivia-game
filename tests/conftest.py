@@ -2,10 +2,10 @@ from unittest.mock import Mock
 
 import pytest
 
-from trivia_game.base_types import AppControllerProtocol, TriviaGameProtocol
 from trivia_game.trivia_api import TriviaAPIClient
 from trivia_game.view.frames import MainMenuFrame
 from trivia_game.view.frames.base_frame import BaseFrame
+from trivia_game.view.frames.quiz_frames import BaseQuizFrame, MultipleChoiceQuizFrame, TrueFalseQuizFrame
 
 
 @pytest.fixture
@@ -65,16 +65,11 @@ def mock_questions_success(mock_response):
 
 
 @pytest.fixture
-def mock_controller():
-    """Create mock controller with quiz brain"""
-    controller = Mock(spec=AppControllerProtocol)
-    controller.quiz_brain = Mock(spec=TriviaGameProtocol)
-
-    # Setup quiz brain mock methods
-    controller.quiz_brain.get_available_categories.return_value = ["Any Category", "History"]
-    controller.quiz_brain.get_available_difficulties.return_value = ["Any Difficulty", "Easy"]
-    controller.quiz_brain.get_available_question_types.return_value = ["Any Type", "Multiple Choice"]
-
+def mock_controller(mocker):
+    """Create a mock controller with quiz_brain"""
+    controller = mocker.Mock()
+    controller.quiz_brain = mocker.Mock()
+    controller.quiz_brain.current_question = None
     return controller
 
 
@@ -132,3 +127,32 @@ def start_game_frame(mock_controller, mock_customtkinter):
     from trivia_game.view.frames.start_game import StartGameFrame
 
     return StartGameFrame(None, mock_controller)
+
+
+@pytest.fixture
+def mock_question(mocker):
+    """Create a mock Question object"""
+    question = mocker.Mock()
+    question.question = "Test Question"
+    question.type = "multiple"
+    question.correct_answer = "A"
+    question.incorrect_answers = ["B", "C", "D"]
+    return question
+
+
+@pytest.fixture
+def base_quiz_frame(mock_controller):
+    """Create a BaseQuizFrame instance"""
+    return BaseQuizFrame(None, mock_controller)
+
+
+@pytest.fixture
+def true_false_frame(mock_controller):
+    """Create a TrueFalseQuizFrame instance"""
+    return TrueFalseQuizFrame(None, mock_controller)
+
+
+@pytest.fixture
+def multiple_choice_frame(mock_controller):
+    """Create a MultipleChoiceQuizFrame instance"""
+    return MultipleChoiceQuizFrame(None, mock_controller)

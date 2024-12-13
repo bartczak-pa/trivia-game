@@ -17,6 +17,7 @@ class BaseQuizFrame(BaseFrame):
 
     def _create_widgets(self) -> None:
         """Create and place widgets"""
+        self._clear_previous_widgets()
         self._create_question_frame()
         self._create_question_label()
         self.display_question()
@@ -43,8 +44,16 @@ class BaseQuizFrame(BaseFrame):
         Args:
             answer (str): The selected answer
         """
-        print(f"Selected answer: {answer}")  # For testing
-        # TODO: Implement answer handling logic
+        is_correct = self.controller.quiz_brain.check_answer(answer)
+
+        self.question_frame.configure(fg_color="green" if is_correct else "red")
+
+        self.after(1000, lambda _=None: self._reset_and_continue())
+
+    def _reset_and_continue(self) -> None:
+        """Reset frame color and show next question"""
+        self.question_frame.configure(fg_color=("gray85", "gray25"))
+        self.controller.quiz_brain.show_next_question()
 
     def display_question(self) -> None:
         """Display current question"""
@@ -56,6 +65,12 @@ class BaseQuizFrame(BaseFrame):
         """Refresh frame content. Base implementation - override in subclasses if needed"""
         self.display_question()
         self._create_answer_buttons()
+
+    def _clear_previous_widgets(self) -> None:
+        """Clear all widgets except the question frame"""
+        for widget in self.winfo_children():
+            if isinstance(widget, ctk.CTkFrame) and widget != self.question_frame:
+                widget.destroy()
 
 
 class TrueFalseQuizFrame(BaseQuizFrame):

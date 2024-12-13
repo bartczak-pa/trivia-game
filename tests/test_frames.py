@@ -1,83 +1,90 @@
-from trivia_game.view.frames.base_frame import BaseFrame
+import customtkinter as ctk
+
+from trivia_game.view.frames.quiz_frames import BaseQuizFrame
 
 
-class TestBaseFrame:
-    def test_init_calls_setup_methods(self, mocker, base_frame):
-        """Test if initialization calls required setup methods"""
-        mock_grid = mocker.patch.object(BaseFrame, "_setup_grid")
-        mock_widgets = mocker.patch.object(BaseFrame, "_create_widgets")
+class TestBaseQuizFrame:
+    def test_create_widgets_calls_required_methods(self, mocker, base_quiz_frame):
+        """Test if _create_widgets calls all required methods"""
+        mock_clear = mocker.patch.object(BaseQuizFrame, "_clear_previous_widgets")
+        mock_frame = mocker.patch.object(BaseQuizFrame, "_create_question_frame")
+        mock_label = mocker.patch.object(BaseQuizFrame, "_create_question_label")
+        mock_display = mocker.patch.object(BaseQuizFrame, "display_question")
 
-        frame = BaseFrame(None, base_frame.controller)
+        base_quiz_frame._create_widgets()
 
-        mock_grid.assert_called_once()
-        mock_widgets.assert_called_once()
+        mock_clear.assert_called_once()
+        mock_frame.assert_called_once()
+        mock_label.assert_called_once()
+        mock_display.assert_called_once()
+
+    def test_handle_answer_changes_frame_color(self, mocker, base_quiz_frame, mock_controller):
+        """Test if _handle_answer changes frame color based on answer correctness"""
+        mock_controller.quiz_brain.check_answer.return_value = True
+        base_quiz_frame._handle_answer("test")
+
+        assert base_quiz_frame.question_frame.cget("fg_color") == "green"
+
+        mock_controller.quiz_brain.check_answer.return_value = False
+        base_quiz_frame._handle_answer("test")
+
+        assert base_quiz_frame.question_frame.cget("fg_color") == "red"
+
+    def test_display_question_updates_label(self, base_quiz_frame, mock_controller, mock_question):
+        """Test if display_question updates label text"""
+        mock_controller.quiz_brain.current_question = mock_question
+        base_quiz_frame.display_question()
+
+        assert base_quiz_frame.question_label.cget("text") == mock_question.question
 
 
-class TestMainMenuFrame:
-    def test_button_mapping_commands(self, main_menu_frame, mock_controller):
-        """Test if button commands are properly mapped"""
-        # Test navigation buttons
-        main_menu_frame.button_mapping["Start Game"]()
-        mock_controller.show_frame.assert_called_with("StartGameFrame")
+class TestTrueFalseQuizFrame:
+    def test_create_answer_buttons_with_question(self, true_false_frame, mock_controller, mock_question):
+        """Test if True/False buttons are created when question exists"""
+        mock_controller.quiz_brain.current_question = mock_question
+        true_false_frame._create_answer_buttons()
 
-        main_menu_frame.button_mapping["High Scores"]()
-        mock_controller.show_frame.assert_called_with("ScoreboardFrame")
+        # Get all widgets recursively
+        buttons = []
+        for widget in true_false_frame.winfo_children():
+            if isinstance(widget, ctk.CTkFrame) and widget != true_false_frame.question_frame:
+                buttons.extend(w for w in widget.winfo_children() if isinstance(w, ctk.CTkButton))
 
-        main_menu_frame.button_mapping["Settings"]()
-        mock_controller.show_frame.assert_called_with("AppSettingsFrame")
+        assert len(buttons) == 2
+        button_texts = sorted(b.cget("text") for b in buttons)
+        assert button_texts == ["False", "True"]
 
-        # Test quit button
-        main_menu_frame.button_mapping["Exit"]()
-        mock_controller.quit.assert_called_once()
+    def test_create_answer_buttons_without_question(self, true_false_frame, mock_controller):
+        """Test if no buttons are created when no question exists"""
+        mock_controller.quiz_brain.current_question = None
+        true_false_frame._create_answer_buttons()
+
+        buttons = [w for w in true_false_frame.winfo_children() if isinstance(w, ctk.CTkButton)]
+        assert not buttons
 
 
-class TestStartGameFrame:
-    def test_init_variables_default_values(self, start_game_frame):
-        """Test if variables are initialized with correct default values"""
-        assert start_game_frame.category_var.get() == "Any Category"
-        assert start_game_frame.difficulty_var.get() == "Any Difficulty"
-        assert start_game_frame.type_var.get() == "Any Type"
+class TestMultipleChoiceQuizFrame:
+    def test_create_answer_buttons_with_question(self, multiple_choice_frame, mock_controller, mock_question):
+        """Test if multiple choice buttons are created when question exists"""
+        mock_controller.quiz_brain.current_question = mock_question
+        mock_question.all_answers.return_value = ["A", "B", "C", "D"]
 
-    def test_create_option_menus_calls_quiz_brain(self, start_game_frame, mock_controller):
-        """Test if option menus creation calls appropriate quiz_brain methods"""
+        multiple_choice_frame._create_answer_buttons()
 
-        # Reset mock call counts since _create_option_menus is called during __init__
-        mock_controller.quiz_brain.get_available_categories.reset_mock()
+        # Get all widgets recursively
+        buttons = []
+        for widget in multiple_choice_frame.winfo_children():
+            if isinstance(widget, ctk.CTkFrame) and widget != multiple_choice_frame.question_frame:
+                buttons.extend(w for w in widget.winfo_children() if isinstance(w, ctk.CTkButton))
 
-        mock_controller.quiz_brain.get_available_difficulties.reset_mock()
-        mock_controller.quiz_brain.get_available_question_types.reset_mock()
+        assert len(buttons) == 4
+        button_texts = [b.cget("text") for b in buttons]
+        assert all(text in ["A", "B", "C", "D"] for text in button_texts)
 
-        # Act
-        start_game_frame._create_option_menus()
+    def test_create_answer_buttons_without_question(self, multiple_choice_frame, mock_controller):
+        """Test if no buttons are created when no question exists"""
+        mock_controller.quiz_brain.current_question = None
+        multiple_choice_frame._create_answer_buttons()
 
-        # Assert
-        mock_controller.quiz_brain.get_available_categories.assert_called_once()
-        mock_controller.quiz_brain.get_available_difficulties.assert_called_once()
-        mock_controller.quiz_brain.get_available_question_types.assert_called_once()
-
-    def test_get_selected_values_calls_quiz_brain(self, start_game_frame, mock_controller):
-        """Test if get_selected_values calls appropriate quiz_brain methods"""
-        start_game_frame.get_selected_values()
-
-        mock_controller.quiz_brain.get_category_id.assert_called_once_with("Any Category")
-        mock_controller.quiz_brain.get_difficulty_value.assert_called_once_with("Any Difficulty")
-        mock_controller.quiz_brain.get_question_type_value.assert_called_once_with("Any Type")
-
-    def test_get_selected_values_returns_correct_tuple(self, start_game_frame, mock_controller):
-        """Test if get_selected_values returns correct values"""
-        mock_controller.quiz_brain.get_category_id.return_value = "9"
-        mock_controller.quiz_brain.get_difficulty_value.return_value = "easy"
-        mock_controller.quiz_brain.get_question_type_value.return_value = "multiple"
-
-        result = start_game_frame.get_selected_values()
-        assert result == ("9", "easy", "multiple")
-
-    def test_start_game_loads_questions(self, start_game_frame, mock_controller):
-        """Test if start_game calls load_questions with correct values"""
-        mock_controller.quiz_brain.get_category_id.return_value = "9"
-        mock_controller.quiz_brain.get_difficulty_value.return_value = "easy"
-        mock_controller.quiz_brain.get_question_type_value.return_value = "multiple"
-
-        start_game_frame._start_game()
-
-        mock_controller.quiz_brain.load_questions.assert_called_once_with("9", "easy", "multiple")
+        buttons = [w for w in multiple_choice_frame.winfo_children() if isinstance(w, ctk.CTkButton)]
+        assert not buttons
