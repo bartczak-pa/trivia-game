@@ -6,8 +6,8 @@ from trivia_game.view.frames.quiz_frames import BaseQuizFrame, TrueFalseQuizFram
 @pytest.mark.usefixtures("mock_ctk")
 class TestBaseQuizFrame:
     def test_create_widgets_calls_required_methods(self, mocker, base_quiz_frame):
-        """Test if _create_widgets calls all required methods"""
         mock_clear = mocker.patch.object(BaseQuizFrame, "_clear_previous_widgets")
+        mock_score = mocker.patch.object(BaseQuizFrame, "_create_score_label")
         mock_frame = mocker.patch.object(BaseQuizFrame, "_create_question_frame")
         mock_label = mocker.patch.object(BaseQuizFrame, "_create_question_label")
         mock_display = mocker.patch.object(BaseQuizFrame, "display_question")
@@ -15,6 +15,7 @@ class TestBaseQuizFrame:
         base_quiz_frame._create_widgets()
 
         mock_clear.assert_called_once()
+        mock_score.assert_called_once()
         mock_frame.assert_called_once()
         mock_label.assert_called_once()
         mock_display.assert_called_once()

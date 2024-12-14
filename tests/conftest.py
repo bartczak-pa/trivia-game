@@ -180,30 +180,23 @@ def quiz_brain(mock_controller):
 
 @pytest.fixture(autouse=True)
 def mock_ctk(monkeypatch):
-    """Mock CustomTkinter widgets and root for testing"""
-    mock_tk = MagicMock()
+    mock_ctk = MagicMock()
+    mock_ctk.CTkFrame = MagicMock()
+    mock_ctk.CTkLabel = MagicMock()
+    mock_ctk.CTkButton = MagicMock()
 
-    # Create mock classes
-    mock_tk.CTkFrame = MagicMock()
-    mock_tk.CTkLabel = MagicMock()
-    mock_tk.CTkButton = MagicMock()
+    # Mock necessary methods
+    for widget in [mock_ctk.CTkFrame, mock_ctk.CTkLabel, mock_ctk.CTkButton]:
+        widget.return_value.grid = MagicMock()
+        widget.return_value.configure = MagicMock()
+        widget.return_value.cget = MagicMock()
 
-    # Add required methods to Frame
-    mock_tk.CTkFrame.return_value.winfo_children = MagicMock(return_value=[])
-    mock_tk.CTkFrame.return_value.grid = MagicMock()
-    mock_tk.CTkFrame.return_value.configure = MagicMock()
+    # Mock winfo_children for frame
+    mock_ctk.CTkFrame.return_value.winfo_children = MagicMock(return_value=[])
 
-    # Add required methods to Label
-    mock_tk.CTkLabel.return_value.grid = MagicMock()
-    mock_tk.CTkLabel.return_value.configure = MagicMock()
+    # Patch CustomTkinter
+    monkeypatch.setattr("customtkinter.CTkFrame", mock_ctk.CTkFrame)
+    monkeypatch.setattr("customtkinter.CTkLabel", mock_ctk.CTkLabel)
+    monkeypatch.setattr("customtkinter.CTkButton", mock_ctk.CTkButton)
 
-    # Add required methods to Button
-    mock_tk.CTkButton.return_value.grid = MagicMock()
-    mock_tk.CTkButton.return_value.configure = MagicMock()
-
-    # Patch the entire customtkinter module
-    monkeypatch.setattr("customtkinter.CTkFrame", mock_tk.CTkFrame)
-    monkeypatch.setattr("customtkinter.CTkLabel", mock_tk.CTkLabel)
-    monkeypatch.setattr("customtkinter.CTkButton", mock_tk.CTkButton)
-
-    return mock_tk
+    return mock_ctk
