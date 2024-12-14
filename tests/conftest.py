@@ -1,4 +1,4 @@
-from unittest.mock import Mock
+from unittest.mock import MagicMock, Mock
 
 import pytest
 
@@ -144,9 +144,13 @@ def mock_question(mocker):
 
 
 @pytest.fixture
-def base_quiz_frame(mock_controller):
-    """Create a BaseQuizFrame instance"""
-    return BaseQuizFrame(None, mock_controller)
+def base_quiz_frame(mock_controller, mock_ctk):
+    """Create a BaseQuizFrame instance with mocked widgets"""
+    frame = BaseQuizFrame(None, mock_controller)
+    frame.question_frame = mock_ctk.CTkFrame()
+    frame.question_label = mock_ctk.CTkLabel()
+    frame.score_label = mock_ctk.CTkLabel()
+    return frame
 
 
 @pytest.fixture
@@ -172,3 +176,15 @@ def quiz_brain(mock_controller):
     brain.questions = []
 
     return brain
+
+
+@pytest.fixture(autouse=True)
+def mock_ctk(monkeypatch):
+    mock_ctk = MagicMock()
+    mock_ctk.CTkFrame = MagicMock()
+    mock_ctk.CTkLabel = MagicMock()
+    mock_ctk.CTkButton = MagicMock()
+    monkeypatch.setattr("customtkinter.CTkFrame", mock_ctk.CTkFrame)
+    monkeypatch.setattr("customtkinter.CTkLabel", mock_ctk.CTkLabel)
+    monkeypatch.setattr("customtkinter.CTkButton", mock_ctk.CTkButton)
+    return mock_ctk
