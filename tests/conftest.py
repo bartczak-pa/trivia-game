@@ -1,11 +1,14 @@
-from unittest.mock import Mock
+from unittest.mock import MagicMock, Mock
 
 import pytest
 
-from trivia_game.base_types import AppControllerProtocol, TriviaGameProtocol
 from trivia_game.trivia_api import TriviaAPIClient
 from trivia_game.view.frames import MainMenuFrame
 from trivia_game.view.frames.base_frame import BaseFrame
+from trivia_game.view.frames.quiz_frames import BaseQuizFrame, MultipleChoiceQuizFrame, TrueFalseQuizFrame
+
+# Ignore folder in progress
+collect_ignore = ["in_progress/"]
 
 
 @pytest.fixture
@@ -65,16 +68,11 @@ def mock_questions_success(mock_response):
 
 
 @pytest.fixture
-def mock_controller():
-    """Create mock controller with quiz brain"""
-    controller = Mock(spec=AppControllerProtocol)
-    controller.quiz_brain = Mock(spec=TriviaGameProtocol)
-
-    # Setup quiz brain mock methods
-    controller.quiz_brain.get_available_categories.return_value = ["Any Category", "History"]
-    controller.quiz_brain.get_available_difficulties.return_value = ["Any Difficulty", "Easy"]
-    controller.quiz_brain.get_available_question_types.return_value = ["Any Type", "Multiple Choice"]
-
+def mock_controller(mocker):
+    """Create a mock controller with quiz_brain"""
+    controller = mocker.Mock()
+    controller.quiz_brain = mocker.Mock()
+    controller.quiz_brain.current_question = None
     return controller
 
 
@@ -132,3 +130,73 @@ def start_game_frame(mock_controller, mock_customtkinter):
     from trivia_game.view.frames.start_game import StartGameFrame
 
     return StartGameFrame(None, mock_controller)
+
+
+@pytest.fixture
+def mock_question(mocker):
+    """Create a mock Question object"""
+    question = mocker.Mock()
+    question.question = "Test Question"
+    question.type = "multiple"
+    question.correct_answer = "A"
+    question.incorrect_answers = ["B", "C", "D"]
+    return question
+
+
+@pytest.fixture
+def base_quiz_frame(mock_controller, mock_ctk):
+    """Create a BaseQuizFrame instance with mocked widgets"""
+    frame = BaseQuizFrame(None, mock_controller)
+    frame.question_frame = mock_ctk.CTkFrame()
+    frame.question_label = mock_ctk.CTkLabel()
+    frame.score_label = mock_ctk.CTkLabel()
+    return frame
+
+
+@pytest.fixture
+def true_false_frame(mock_controller):
+    """Create a TrueFalseQuizFrame instance"""
+    return TrueFalseQuizFrame(None, mock_controller)
+
+
+@pytest.fixture
+def multiple_choice_frame(mock_controller):
+    """Create a MultipleChoiceQuizFrame instance"""
+    return MultipleChoiceQuizFrame(None, mock_controller)
+
+
+@pytest.fixture
+def quiz_brain(mock_controller):
+    """Create a QuizBrain instance with mock controller"""
+    from trivia_game.quiz_brain import QuizBrain
+
+    brain = QuizBrain(mock_controller)
+    brain.score = 0
+    brain.current_question = None
+    brain.questions = []
+
+    return brain
+
+
+@pytest.fixture(autouse=True)
+def mock_ctk(monkeypatch):
+    mock_ctk = MagicMock()
+    mock_ctk.CTkFrame = MagicMock()
+    mock_ctk.CTkLabel = MagicMock()
+    mock_ctk.CTkButton = MagicMock()
+
+    # Mock necessary methods
+    for widget in [mock_ctk.CTkFrame, mock_ctk.CTkLabel, mock_ctk.CTkButton]:
+        widget.return_value.grid = MagicMock()
+        widget.return_value.configure = MagicMock()
+        widget.return_value.cget = MagicMock()
+
+    # Mock winfo_children for frame
+    mock_ctk.CTkFrame.return_value.winfo_children = MagicMock(return_value=[])
+
+    # Patch CustomTkinter
+    monkeypatch.setattr("customtkinter.CTkFrame", mock_ctk.CTkFrame)
+    monkeypatch.setattr("customtkinter.CTkLabel", mock_ctk.CTkLabel)
+    monkeypatch.setattr("customtkinter.CTkButton", mock_ctk.CTkButton)
+
+    return mock_ctk

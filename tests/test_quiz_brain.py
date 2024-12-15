@@ -4,6 +4,7 @@ import pytest
 
 from trivia_game.base_types import AppControllerProtocol
 from trivia_game.exceptions import CategoryError
+from trivia_game.models import Question
 
 
 class TestQuizBrain:
@@ -157,3 +158,121 @@ class TestQuizBrain:
         # Act & Assert
         with pytest.raises(KeyError):
             self.quiz_brain.get_question_type_value("Invalid Type")
+
+    def test_load_questions_success(self, mock_questions_success):
+        """Test loading questions successfully"""
+        # Arrange
+        expected_questions = [
+            Question(
+                type="multiple",
+                difficulty="medium",
+                category="Test",
+                question="Test1?",
+                correct_answer="A",
+                incorrect_answers=["B", "C", "D"],
+            )
+        ]
+        self.quiz_brain.api_client.fetch_questions = Mock(return_value=expected_questions)
+
+        # Act
+        self.quiz_brain.load_questions(category="9", difficulty="easy", question_type="multiple")
+
+        # Assert
+        assert len(self.quiz_brain.questions) == len(expected_questions)
+        assert self.quiz_brain.score == 0
+        self.quiz_brain.api_client.fetch_questions.assert_called_once_with(
+            category="9", difficulty="easy", question_type="multiple"
+        )
+
+    def test_load_questions_handles_error(self):
+        """Test question loading error handling"""
+        # Arrange
+        error_message = "API Error"
+        self.quiz_brain.api_client.fetch_questions = Mock(side_effect=Exception(error_message))
+
+        # Act
+        self.quiz_brain.load_questions(None, None, None)
+
+        # Assert
+        self.mock_controller.show_error.assert_called_once_with(f"Error loading questions: {error_message}")
+
+    def test_show_next_question_with_questions(self):
+        """Test showing next question when questions are available"""
+        # Arrange
+        test_questions = [
+            Question(
+                type="boolean",
+                difficulty="easy",
+                category="Test",
+                question="Test1?",
+                correct_answer="True",
+                incorrect_answers=["False"],
+            ),
+            Question(
+                type="multiple",
+                difficulty="medium",
+                category="Test",
+                question="Test2?",
+                correct_answer="A",
+                incorrect_answers=["B", "C", "D"],
+            ),
+        ]
+        self.quiz_brain.questions = test_questions.copy()
+
+        # Act
+        self.quiz_brain.show_next_question()
+
+        # Assert
+        assert self.quiz_brain.current_question == test_questions[0]
+        assert len(self.quiz_brain.questions) == 1
+        self.mock_controller.show_frame.assert_called_once_with("TrueFalseQuizFrame")
+
+    def test_show_next_question_empty_questions(self):
+        """Test showing next question with no questions remaining"""
+        # Arrange
+        self.quiz_brain.questions = []
+
+        # Act
+        self.quiz_brain.show_next_question()
+
+        # Assert
+        self.mock_controller.show_frame.assert_called_once_with("ScoreboardFrame")
+
+    def test_check_answer(self, quiz_brain, mock_question):
+        """Test if check_answer correctly validates answers and updates score"""
+        quiz_brain.current_question = mock_question
+        quiz_brain.score = 0
+
+        # Test correct answer
+        mock_question.correct_answer = "True"
+        mock_question.difficulty = "medium"
+        assert quiz_brain.check_answer("True") == True
+        assert quiz_brain.score == 200  # Medium difficulty: 100 * 2
+
+        # Test incorrect answer
+        quiz_brain.score = 0
+        assert quiz_brain.check_answer("False") == False
+        assert quiz_brain.score == 0  # Score shouldn't change for incorrect answer
+
+        # Test with different difficulties
+        quiz_brain.score = 0
+        mock_question.difficulty = "easy"
+        quiz_brain.check_answer("True")
+        assert quiz_brain.score == 100  # Easy difficulty: 100 * 1
+
+        quiz_brain.score = 0
+        mock_question.difficulty = "hard"
+        quiz_brain.check_answer("True")
+        assert quiz_brain.score == 300  # Hard difficulty: 100 * 3
+
+    def test_calculate_score(self, quiz_brain):
+        """Test if _calculate_score returns correct score based on difficulty"""
+        assert quiz_brain._calculate_score("easy") == 100
+        assert quiz_brain._calculate_score("medium") == 200
+        assert quiz_brain._calculate_score("hard") == 300
+
+    def test_calculate_score_unknown_difficulty(self, quiz_brain):
+        """Test if _calculate_score handles unknown difficulty"""
+
+        multiplier = quiz_brain.DIFFICULTY_MULTIPLIER.get("unknown", 1)
+        assert multiplier == 1
