@@ -3,7 +3,7 @@ coverage:
   round: down
   precision: 1
   ignore:
-    - "tests/in_progress/*"
+    - "tests/gui/*"
     - "tests/test_frames.py"
   status:
     project:
