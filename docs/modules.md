@@ -7,4 +7,4 @@
 ::: trivia_game.view.dialogs.score_dialog
 ::: trivia_game.view.frames.base_frame
 ::: trivia_game.view.frames.quiz_frames
-::: trivia_game.view.frames.scoreboard_frame
+::: trivia_game.view.frames.score_board
