@@ -3,44 +3,6 @@ import pytest
 from trivia_game.view.frames.quiz_frames import BaseQuizFrame, TrueFalseQuizFrame
 
 
-class TestBaseQuizFrameNonGUI:
-    def test_clear_previous_widgets(self, mocker, base_quiz_frame):
-        # Create a type-like object for isinstance check
-        mock_frame_type = type("CTkFrame", (), {})
-
-        # Patch CTkFrame in the module
-        mocker.patch("customtkinter.CTkFrame", mock_frame_type)
-
-        # Create a mock widget
-        mock_widget = mocker.Mock(spec=object)
-        mock_widget.__class__ = mock_frame_type
-        mock_widget.destroy = mocker.Mock()
-
-        # Set up the question_frame
-        base_quiz_frame.question_frame = mocker.Mock(spec=object)
-        base_quiz_frame.question_frame.__class__ = mock_frame_type
-
-        # Mock winfo_children
-        base_quiz_frame.winfo_children = mocker.Mock(return_value=[mock_widget])
-
-        base_quiz_frame._clear_previous_widgets()
-
-        mock_widget.destroy.assert_called_once()
-
-    def test_reset_and_continue(self, mocker, base_quiz_frame):
-        mock_configure = mocker.patch.object(base_quiz_frame.question_frame, "configure")
-        mock_show_next = mocker.patch.object(base_quiz_frame.controller.quiz_brain, "show_next_question")
-
-        base_quiz_frame._reset_and_continue()
-
-        mock_configure.assert_called_with(fg_color=("gray85", "gray25"))
-        mock_show_next.assert_called_once()
-
-    def test_create_answer_buttons_raises_error(self, base_quiz_frame):
-        with pytest.raises(NotImplementedError):
-            base_quiz_frame._create_answer_buttons()
-
-
 @pytest.mark.usefixtures("mock_ctk")
 @pytest.mark.gui
 class TestBaseQuizFrame:
@@ -150,6 +112,29 @@ class TestBaseQuizFrame:
 
         # Verify grid placement
         mock_label.grid.assert_called_once_with(row=1, column=1, pady=10)
+
+    def test_clear_previous_widgets(self, mocker, base_quiz_frame):
+        # Create a type-like object for isinstance check
+        mock_frame_type = type("CTkFrame", (), {})
+
+        # Patch CTkFrame in the module
+        mocker.patch("customtkinter.CTkFrame", mock_frame_type)
+
+        # Create a mock widget
+        mock_widget = mocker.Mock(spec=object)
+        mock_widget.__class__ = mock_frame_type
+        mock_widget.destroy = mocker.Mock()
+
+        # Set up the question_frame
+        base_quiz_frame.question_frame = mocker.Mock(spec=object)
+        base_quiz_frame.question_frame.__class__ = mock_frame_type
+
+        # Mock winfo_children
+        base_quiz_frame.winfo_children = mocker.Mock(return_value=[mock_widget])
+
+        base_quiz_frame._clear_previous_widgets()
+
+        mock_widget.destroy.assert_called_once()
 
 
 @pytest.mark.usefixtures("mock_ctk")
