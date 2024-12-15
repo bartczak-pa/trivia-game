@@ -3,6 +3,44 @@ import pytest
 from trivia_game.view.frames.quiz_frames import BaseQuizFrame, TrueFalseQuizFrame
 
 
+class TestBaseQuizFrameNonGUI:
+    def test_clear_previous_widgets(self, mocker, base_quiz_frame):
+        # Create a type-like object for isinstance check
+        mock_frame_type = type("CTkFrame", (), {})
+
+        # Patch CTkFrame in the module
+        mocker.patch("customtkinter.CTkFrame", mock_frame_type)
+
+        # Create a mock widget
+        mock_widget = mocker.Mock(spec=object)
+        mock_widget.__class__ = mock_frame_type
+        mock_widget.destroy = mocker.Mock()
+
+        # Set up the question_frame
+        base_quiz_frame.question_frame = mocker.Mock(spec=object)
+        base_quiz_frame.question_frame.__class__ = mock_frame_type
+
+        # Mock winfo_children
+        base_quiz_frame.winfo_children = mocker.Mock(return_value=[mock_widget])
+
+        base_quiz_frame._clear_previous_widgets()
+
+        mock_widget.destroy.assert_called_once()
+
+    def test_reset_and_continue(self, mocker, base_quiz_frame):
+        mock_configure = mocker.patch.object(base_quiz_frame.question_frame, "configure")
+        mock_show_next = mocker.patch.object(base_quiz_frame.controller.quiz_brain, "show_next_question")
+
+        base_quiz_frame._reset_and_continue()
+
+        mock_configure.assert_called_with(fg_color=("gray85", "gray25"))
+        mock_show_next.assert_called_once()
+
+    def test_create_answer_buttons_raises_error(self, base_quiz_frame):
+        with pytest.raises(NotImplementedError):
+            base_quiz_frame._create_answer_buttons()
+
+
 @pytest.mark.usefixtures("mock_ctk")
 @pytest.mark.gui
 class TestBaseQuizFrame:
@@ -81,6 +119,38 @@ class TestBaseQuizFrame:
         mock_parent.assert_called_once()
         mock_buttons.assert_called_once()
 
+    def test_setup_grid(self, mocker, base_quiz_frame):
+        """Test if _setup_grid configures grid correctly"""
+        mock_rowconfigure = mocker.patch.object(base_quiz_frame, "grid_rowconfigure")
+        mock_columnconfigure = mocker.patch.object(base_quiz_frame, "grid_columnconfigure")
+
+        base_quiz_frame._setup_grid()
+
+        # Check row configurations
+        assert mock_rowconfigure.call_count == 2  # Two calls: (0,4) and (1,2,3)
+        mock_rowconfigure.assert_any_call((0, 4), weight=1)
+        mock_rowconfigure.assert_any_call((1, 2, 3), weight=0)
+
+        # Check column configurations
+        assert mock_columnconfigure.call_count == 2  # Two calls: (0,2) and 1
+        mock_columnconfigure.assert_any_call((0, 2), weight=1)
+        mock_columnconfigure.assert_any_call(1, weight=0)
+
+    def test_create_score_label(self, mocker, base_quiz_frame):
+        """Test if score label is created and placed correctly"""
+        mock_label = mocker.Mock()
+        mock_ctk_label = mocker.patch("customtkinter.CTkLabel", return_value=mock_label)
+
+        base_quiz_frame._create_score_label()
+
+        # Verify label creation
+        mock_ctk_label.assert_called_once_with(
+            base_quiz_frame, text=f"Score: {base_quiz_frame.controller.quiz_brain.score}", font=("Arial", 16, "bold")
+        )
+
+        # Verify grid placement
+        mock_label.grid.assert_called_once_with(row=1, column=1, pady=10)
+
 
 @pytest.mark.usefixtures("mock_ctk")
 @pytest.mark.gui
@@ -110,6 +180,13 @@ class TestTrueFalseQuizFrame:
         button_texts = sorted(b.cget("text") for b in mock_buttons)
         assert button_texts == ["False", "True"]
 
+    def test_setup_grid(self, mocker, true_false_frame):
+        mock_super = mocker.patch.object(BaseQuizFrame, "_setup_grid")
+
+        true_false_frame._setup_grid()
+
+        mock_super.assert_called_once()
+
 
 @pytest.mark.usefixtures("mock_ctk")
 @pytest.mark.gui
@@ -137,3 +214,10 @@ class TestMultipleChoiceQuizFrame:
         # Verify buttons
         assert len(mock_buttons) == 4
         assert all(b.cget("text") in ["A", "B", "C", "D"] for b in mock_buttons)
+
+    def test_setup_grid(self, mocker, multiple_choice_frame):
+        mock_super = mocker.patch.object(BaseQuizFrame, "_setup_grid")
+
+        multiple_choice_frame._setup_grid()
+
+        mock_super.assert_called_once()
