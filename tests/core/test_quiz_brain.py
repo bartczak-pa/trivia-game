@@ -207,6 +207,7 @@ class TestQuizBrainGameFlow:
         assert quiz_brain.score == 0  # Score should be reset
         mock_show_frame.assert_called_once_with("ScoreboardFrame")
 
+    @pytest.mark.gui
     def test_end_game_no_name(self, quiz_brain, mocker):
         mock_dialog = mocker.patch("trivia_game.view.dialogs.score_dialog.ScoreDialog")
         mock_dialog.return_value.get_input.return_value = None
