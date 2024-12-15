@@ -211,7 +211,7 @@ class QuizBrain(TriviaGameProtocol):
             with scores_file.open("r") as f:
                 scores = json.load(f)
         else:
-            scores: list = []
+            scores = []
 
         scores.append({
             "player": entry.player_name,
