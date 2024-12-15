@@ -1,4 +1,4 @@
-from customtkinter import ctk  # type: ignore[import-untyped]
+import customtkinter as ctk  # type: ignore[import-untyped]
 
 
 class ScoreDialog(ctk.CTkInputDialog):
