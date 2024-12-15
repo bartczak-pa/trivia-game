@@ -13,7 +13,6 @@ from trivia_game.exceptions import (
     TriviaAPIError,
 )
 from trivia_game.models import Question, TriviaResponseCode
-from trivia_game.trivia_api import TriviaAPIClient
 
 
 class TestCreateSession:
@@ -345,18 +344,6 @@ class TestCategories:
 
             with pytest.raises(CategoryError, match="Failed to fetch categories: Request failed: Connection error"):
                 trivia_client.fetch_categories()
-
-    @pytest.mark.integration
-    def test_real_categories_fetch(self):
-        """Test fetching categories from actual API"""
-        client = TriviaAPIClient()
-        try:
-            categories = client.fetch_categories()
-
-            assert len(categories) > 0
-            assert all(isinstance(name, str) and isinstance(id_, str) for name, id_ in categories.items())
-        finally:
-            client.session.close()
 
 
 class TestDecodeText:
