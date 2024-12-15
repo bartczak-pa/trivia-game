@@ -1,3 +1,10 @@
 ::: trivia_game.trivia_api
-:::trivia_game.models
-:::trivia_game.exceptions
+::: trivia_game.models
+::: trivia_game.exceptions
+::: trivia_game.base_types
+::: trivia_game.quiz_brain
+::: trivia_game.trivia_api
+::: trivia_game.view.dialogs.score_dialog
+::: trivia_game.view.frames.base_frame
+::: trivia_game.view.frames.quiz_frames
+::: trivia_game.view.frames.scoreboard_frame
