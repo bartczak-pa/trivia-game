@@ -1,6 +1,7 @@
 """Models for the trivia game."""
 
 from dataclasses import dataclass
+from datetime import datetime
 from enum import IntEnum
 from typing import Literal, TypeVar
 
@@ -46,3 +47,10 @@ class Question:
             list[str]: All answers
         """
         return [self.correct_answer, *self.incorrect_answers]
+
+
+@dataclass
+class ScoreboardEntry:
+    player_name: str
+    score: int
+    date: datetime

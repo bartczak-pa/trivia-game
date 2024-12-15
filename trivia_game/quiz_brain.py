@@ -1,9 +1,13 @@
+import json
+from datetime import datetime
+from pathlib import Path
 from typing import ClassVar, Literal
 
 from trivia_game.base_types import AppControllerProtocol, TriviaGameProtocol
 from trivia_game.exceptions import CategoryError
-from trivia_game.models import Question
+from trivia_game.models import Question, ScoreboardEntry
 from trivia_game.trivia_api import TriviaAPIClient
+from trivia_game.view.dialogs.score_dialog import ScoreDialog
 
 
 class QuizBrain(TriviaGameProtocol):
@@ -141,7 +145,7 @@ class QuizBrain(TriviaGameProtocol):
         """Show next question or end game if no more questions"""
         if not self.questions:
             print("No more questions, showing scoreboard")  # TODO: Remove debug print
-            self.controller.show_frame("ScoreboardFrame")  # TODO: Work on ScoreboardFrame and ending game
+            self.end_game()
             return
 
         self.current_question = self.questions.pop(0)
@@ -177,3 +181,48 @@ class QuizBrain(TriviaGameProtocol):
             int: Calculated score
         """
         return 100 * self.DIFFICULTY_MULTIPLIER[difficulty]
+
+    def end_game(self) -> None:
+        """Handle game completion"""
+
+        dialog: ScoreDialog = ScoreDialog(self.controller, self.score)
+        if player_name := dialog.get_input():
+            self.save_score(player_name)
+
+            self.score = 0
+        self.controller.show_frame("ScoreboardFrame")
+
+    def save_score(self, player_name: str) -> None:
+        """Save score to the scoreboard"""
+        entry = ScoreboardEntry(player_name, self.score, date=datetime.now())
+        print(entry)  # TODO: Remove debug print
+        self._save_to_json(entry)
+
+    def _save_to_json(self, entry: ScoreboardEntry) -> None:
+        """Save scoreboard entry to JSON file
+
+        Args:
+            entry (ScoreboardEntry): The scoreboard entry
+
+        """
+        scores_file = Path("scores.json")
+        if scores_file.exists():
+            with scores_file.open("r") as f:
+                scores = json.load(f)
+        else:
+            scores = []
+
+        scores.append({
+            "player": entry.player_name,
+            "score": entry.score,
+            "date": entry.date.isoformat(),
+        })
+
+        # Keep only top 10 scores
+        scores.sort(key=lambda x: x["score"], reverse=True)
+        scores = scores[:10]
+
+        with scores_file.open("w") as f:
+            json.dump(scores, f, indent=2)
+
+        print("Score saved")
