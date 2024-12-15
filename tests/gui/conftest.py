@@ -2,7 +2,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from trivia_game.view.frames import AppSettingsFrame, MainMenuFrame, StartGameFrame
+from trivia_game.view.frames import AppSettingsFrame, MainMenuFrame, MultipleChoiceQuizFrame, StartGameFrame
 
 
 @pytest.fixture
@@ -42,3 +42,22 @@ def app_settings_frame(mock_controller):
 def start_game_frame(mock_controller):
     """Create StartGameFrame instance"""
     return StartGameFrame(None, mock_controller)
+
+
+@pytest.fixture
+def scoreboard_frame(mock_controller):
+    from trivia_game.view.frames.score_board import ScoreboardFrame
+
+    return ScoreboardFrame(None, mock_controller)
+
+
+@pytest.fixture
+def multiple_choice_frame(mock_controller, mocker):
+    """Create a MultipleChoiceQuizFrame instance"""
+    # Mock the current question's all_answers method to return a list
+    mock_controller.quiz_brain.current_question.all_answers.return_value = ["A", "B", "C", "D"]
+
+    # Patch random.shuffle to avoid actual shuffling
+    mocker.patch("random.shuffle")
+
+    return MultipleChoiceQuizFrame(None, mock_controller)

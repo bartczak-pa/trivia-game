@@ -190,7 +190,6 @@ class QuizBrain(TriviaGameProtocol):
             self.save_score(player_name)
 
             self.score = 0
-            print("Reset score")
         self.controller.show_frame("ScoreboardFrame")
 
     def save_score(self, player_name: str) -> None:

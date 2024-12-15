@@ -44,7 +44,6 @@ class AppInterface(ctk.CTk, AppControllerProtocol):
     def show_frame(self, frame_class: str | type[ctk.CTkFrame]) -> None:
         """Show a frame for the given class or frame name"""
         frame_type: type[ctk.CTkFrame]
-
         if isinstance(frame_class, str):
             try:
                 frame_type = next(f for f in FRAME_CLASSES if f.__name__ == frame_class)
@@ -57,12 +56,9 @@ class AppInterface(ctk.CTk, AppControllerProtocol):
         try:
             frame = self.frames[frame_type]
             frame.tkraise()
-
-            # Refresh quiz frames after raising
+            # Refresh frame if it has a refresh method
             if hasattr(frame, "refresh"):
-                print("DEBUG - Calling refresh on frame")
                 frame.refresh()
-
         except KeyError as exc:
             key_err_msg: str = f"Frame '{frame_type.__name__}' not initialized"
             raise ValueError(key_err_msg) from exc
