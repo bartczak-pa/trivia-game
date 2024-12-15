@@ -4,6 +4,7 @@ coverage:
   precision: 1
   ignore:
     - "tests/in_progress/*"
+    - "tests/test_frames.py"
   status:
     project:
       default:
