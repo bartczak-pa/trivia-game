@@ -47,10 +47,13 @@ show_error_codes = "True"
 
 
 [tool.pytest.ini_options]
+addopts = "-v"
 testpaths = ["tests"]
 markers = [
-    "integration: marks tests that interact with the real API"
+    "integration: marks tests that interact with the real API",
+    "gui: marks tests that require a GUI (deselect with '-m \"not gui\"')",
 ]
+
 
 [tool.ruff]
 target-version = "py313"

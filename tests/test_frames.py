@@ -4,6 +4,7 @@ from trivia_game.view.frames.quiz_frames import BaseQuizFrame, TrueFalseQuizFram
 
 
 @pytest.mark.usefixtures("mock_ctk")
+@pytest.mark.gui
 class TestBaseQuizFrame:
     def test_create_widgets_calls_required_methods(self, mocker, base_quiz_frame):
         mock_clear = mocker.patch.object(BaseQuizFrame, "_clear_previous_widgets")
@@ -82,6 +83,7 @@ class TestBaseQuizFrame:
 
 
 @pytest.mark.usefixtures("mock_ctk")
+@pytest.mark.gui
 class TestTrueFalseQuizFrame:
     def test_create_answer_buttons_with_question(self, mocker, true_false_frame, mock_controller, mock_question):
         """Test if True/False buttons are created when question exists"""
@@ -110,6 +112,7 @@ class TestTrueFalseQuizFrame:
 
 
 @pytest.mark.usefixtures("mock_ctk")
+@pytest.mark.gui
 class TestMultipleChoiceQuizFrame:
     def test_create_answer_buttons_with_question(self, mocker, multiple_choice_frame, mock_controller, mock_question):
         """Test if multiple choice buttons are created when question exists"""
